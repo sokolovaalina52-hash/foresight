@@ -1,0 +1,11 @@
+# Деплой на Amvera: среда «Node.JS Browser».
+# Сборка: npm install && npm run build (по умолчанию), результат из dist/ раздаёт nginx.
+meta:
+  environment: node
+  toolchain:
+    name: browser
+    version: 22
+
+build:
+  artifacts:
+    "dist/*": /
