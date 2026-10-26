@@ -34,6 +34,7 @@ npm run check:terms
 - **GitHub Pages, автоматически**: в настройках репозитория *Settings → Pages → Source* выберите **GitHub Actions**. Каждый push в `main` запускает `.github/workflows/ci.yml`: тесты → сборка → проверка формулировок → публикация.
 - **GitHub Pages, одной командой** с локальной машины: `npm run deploy` (публикует `dist/` в ветку `gh-pages`; в *Settings → Pages* укажите ветку `gh-pages`).
 - **Vercel**: `npx vercel --prod` (настройки — в `vercel.json`).
+- **Amvera**: конфигурация — в `amvera.yml` (среда «Node.JS Browser»: Amvera выполняет `npm install && npm run build` и раздаёт `dist/` через nginx). Создайте в Amvera приложение, на вкладке «Репозиторий» подключите этот GitHub-репозиторий (событие push, ветка `main`) и добавьте выданный адрес как webhook в *Settings → Webhooks* репозитория (Content-type `application/json`, тот же секрет). После этого каждый push в `main` пересобирает приложение.
 
 ## Контент
 
