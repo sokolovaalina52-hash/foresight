@@ -1,0 +1,970 @@
+<title>Форсайт-навигатор</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: fixed left rail (nav) + scrolling main column; on phones the rail becomes a top strip of tabs.
+   Three zones of the model carry their own hue; the accent is a horizon blue used for actions only. */
+:root{
+  --bg:#F1F4F8; --surface:#FFFFFF; --surface-2:#E8EDF3; --fg:#141B25; --muted:#5D6878; --line:#D3DAE4;
+  --accent:#1B5F7E; --accent-ink:#0E3B50; --accent-soft:#DCEBF2; --on-accent:#FFFFFF;
+  --z1:#4759A6; --z1-soft:#E5E8F6; --z2:#1E8A79; --z2-soft:#DDF1EC; --z3:#BD6E22; --z3-soft:#F7E9DA;
+  --ok:#2E8B57; --warn:#C98A1B; --bad:#B9462E;
+  --display:'Unbounded',system-ui,sans-serif; --body:'Golos Text',system-ui,-apple-system,sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --radius:10px; --shadow:0 1px 2px rgba(20,27,37,.06),0 6px 20px rgba(20,27,37,.06);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E131A; --surface:#161D27; --surface-2:#1E2733; --fg:#E7EBF1; --muted:#9AA6B6; --line:#2B3542;
+  --accent:#6FB8D6; --accent-ink:#BFE2F0; --accent-soft:#17344A; --on-accent:#0B1A24;
+  --z1:#8E9BE0; --z1-soft:#232A4A; --z2:#5BC2AE; --z2-soft:#15362F; --z3:#E09A52; --z3-soft:#3B2A17;
+  --ok:#5FBF8A; --warn:#E2AE4A; --bad:#E0735C; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E131A; --surface:#161D27; --surface-2:#1E2733; --fg:#E7EBF1; --muted:#9AA6B6; --line:#2B3542;
+  --accent:#6FB8D6; --accent-ink:#BFE2F0; --accent-soft:#17344A; --on-accent:#0B1A24;
+  --z1:#8E9BE0; --z1-soft:#232A4A; --z2:#5BC2AE; --z2-soft:#15362F; --z3:#E09A52; --z3-soft:#3B2A17;
+  --ok:#5FBF8A; --warn:#E2AE4A; --bad:#E0735C; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:var(--accent)}
+h1,h2,h3,h4{font-family:var(--display);font-weight:500;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(1.6rem,3.2vw,2.5rem)}
+h2{font-size:clamp(1.25rem,2.2vw,1.7rem)}
+h3{font-size:1.05rem}
+h4{font-size:.95rem;font-family:var(--body);font-weight:600}
+p{margin:0}
+.lead{font-size:1.08rem;color:var(--fg);max-width:62ch}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100%}
+.side{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100vh - env(safe-area-inset-top,0px));overflow:auto;border-right:1px solid var(--line);background:var(--surface);padding-block:22px 18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:14px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;flex-direction:column;gap:6px}
+.brand .name{font-family:var(--display);font-size:1.05rem;font-weight:600;letter-spacing:-.01em}
+.brand .sub{font-size:.8rem;color:var(--muted);line-height:1.35}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--fg);text-decoration:none;font-size:.93rem;font-weight:500}
+.nav a .ico{width:22px;height:22px;flex:none;color:var(--muted)}
+.nav a:hover{background:var(--surface-2)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent-ink)}
+.nav a[aria-current="page"] .ico{color:var(--accent)}
+.nav .sep{height:1px;background:var(--line);margin:8px 10px}
+.side .foot{margin-top:auto;font-size:.76rem;color:var(--muted);line-height:1.4}
+
+.main{min-width:0;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.view-head{display:flex;flex-direction:column;gap:10px;max-width:70ch}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+.card.flat{box-shadow:none}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.between{justify-content:space-between}
+
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-weight:500;font-size:.9rem;padding:8px 14px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.sm{padding:5px 10px;font-size:.82rem}
+.btn:focus-visible,.nav a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);letter-spacing:.01em}
+.pill.z1{background:var(--z1-soft);color:var(--z1)}.pill.z2{background:var(--z2-soft);color:var(--z2)}.pill.z3{background:var(--z3-soft);color:var(--z3)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:.86rem;padding:7px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip.z1[aria-pressed="true"]{background:var(--z1);border-color:var(--z1);color:#fff}
+.chip.z2[aria-pressed="true"]{background:var(--z2);border-color:var(--z2);color:#fff}
+.chip.z3[aria-pressed="true"]{background:var(--z3);border-color:var(--z3);color:#fff}
+
+/* home */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:center}
+.hero .copy{display:flex;flex-direction:column;gap:16px}
+.hero .spiral{min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.kpi{border-left:3px solid var(--accent);padding:4px 0 4px 12px}
+.kpi b{font-family:var(--display);font-size:1.5rem;font-weight:500;display:block}
+.kpi span{font-size:.82rem;color:var(--muted)}
+.zone-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.86rem}
+.zone-legend span{display:inline-flex;align-items:center;gap:7px}
+.zone-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* spiral svg */
+svg.sp{width:100%;height:auto;display:block}
+svg.sp .node{cursor:pointer}
+svg.sp .node circle{transition:r .15s ease}
+svg.sp .node:hover circle.main{filter:brightness(1.1)}
+svg.sp text{font-family:var(--body)}
+svg.sp .lbl{font-size:12px;font-weight:600;fill:var(--fg)}
+svg.sp .pos{font-size:10.5px;fill:var(--muted)}
+svg.sp .center-t{font-family:var(--display);font-size:11px;fill:var(--fg);font-weight:500}
+svg.sp .center-s{font-size:9.5px;fill:var(--muted)}
+svg.sp .zone-t{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+@media (prefers-reduced-motion:no-preference){ svg.sp .node circle.main{transition:r .15s ease,filter .15s ease} }
+
+/* stage view */
+.stage-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
+.stage-steps{display:grid;grid-template-columns:1fr;gap:0;counter-reset:st}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.step:first-child{border-top:0}
+.step .n{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-weight:600;font-size:.85rem;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.step .t{font-weight:500}
+.step .tools{font-size:.84rem;color:var(--muted);margin-top:2px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.check:first-child{border-top:0}
+.check input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.check.done span{color:var(--muted);text-decoration:line-through}
+.defl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;font-size:.93rem}
+.defl dt{color:var(--muted)}
+.defl dd{margin:0}
+.progress{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s ease}
+.stage-nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:600px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+
+/* prompts */
+.prompt{display:flex;flex-direction:column;gap:10px}
+.prompt pre{margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:.84rem;line-height:1.5;background:var(--surface-2);padding:14px;border-radius:8px;border:1px solid var(--line)}
+.prompt pre b{color:var(--accent-ink);font-weight:600}
+
+/* forms */
+label.f{display:flex;flex-direction:column;gap:5px;font-size:.88rem;font-weight:500}
+label.f .hint{font-weight:400;color:var(--muted);font-size:.82rem}
+input[type=text],textarea,select{font:inherit;font-size:.95rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+textarea{min-height:84px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.matrix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.quad{border:1px dashed var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.quad .qt{font-size:.8rem;font-weight:600;color:var(--muted)}
+
+/* diagnostics */
+.q{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:0}
+.opts{display:grid;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:.92rem}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.result{border-left:4px solid var(--accent);padding:12px 16px;background:var(--accent-soft);border-radius:0 8px 8px 0;color:var(--fg)}
+.scale{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:.82rem}
+.scale div{padding:8px 10px;border-radius:8px;background:var(--surface-2)}
+.lvl-crit{border-top:3px solid var(--bad)}.lvl-adm{border-top:3px solid var(--warn)}.lvl-opt{border-top:3px solid var(--ok)}
+
+/* chart */
+.bars{display:grid;gap:14px}
+.bar-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;align-items:center}
+.bar-row .lab{font-size:.9rem}
+.bar-row .lab small{display:block;color:var(--muted);font-size:.78rem}
+.track{display:flex;flex-direction:column;gap:4px}
+.bar{height:16px;border-radius:4px;position:relative;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px}
+.bar.kg i{background:var(--muted)}.bar.eg i{background:var(--accent)}
+.bar b{position:absolute;right:8px;top:0;line-height:16px;font-size:.74rem;font-weight:600;color:var(--fg)}
+.legend{display:flex;gap:16px;font-size:.84rem;color:var(--muted)}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:6px}
+
+details{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+details summary{cursor:pointer;padding:14px 18px;font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"+";font-family:var(--mono);color:var(--muted);font-size:1.1rem}
+details[open] summary::after{content:"–"}
+details .body{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px;font-size:.95rem}
+details .body ul,.card ul{margin:0;padding-left:20px}
+details .body li,.card li{margin:3px 0}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:.86rem;box-shadow:var(--shadow);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+
+.footer-note{font-size:.82rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:16px}
+
+@media (max-width: 860px){
+  .app{grid-template-columns:1fr}
+  .side{position:sticky;top:env(safe-area-inset-top,0px);height:auto;border-right:0;border-bottom:1px solid var(--line);padding-block:12px;padding-right:max(16px,env(safe-area-inset-right,0px));gap:10px;z-index:5}
+  .brand .sub{display:none}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:2px;scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{white-space:nowrap;padding:7px 10px;font-size:.86rem}
+  .nav .sep{display:none}
+  .side .foot{display:none}
+  .hero{grid-template-columns:1fr}
+  .stage-head{grid-template-columns:1fr}
+  .defl{grid-template-columns:1fr}
+  .bar-row{grid-template-columns:1fr}
+  .matrix{grid-template-columns:1fr}
+  .main{padding-block:20px 48px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+<script>
+const ZONES = [
+  {id:'z1', name:'Установочно-прогностическая зона', short:'Установочно-прогностическая', stages:[1,2],
+   text:'Вход преподавателя в форсайт-деятельность: переход от позиции потребителя образовательных услуг к позиции субъекта, осознанно включающегося в работу с профессиональным будущим. Реализует андрагогическое допущение о «потребности знать»: демонстрируется связь форсайт-деятельности с конкретными профессиональными задачами, диагностируются установки по отношению к будущему.'},
+  {id:'z2', name:'Содержательно-форсайтинговая зона', short:'Содержательно-форсайтинговая', stages:[3,4],
+   text:'Ядро форсайт-деятельности: восхождение от абстрактного к конкретному (В.В. Давыдов). Конструирование альтернативных сценариев развития предметной области и профессии (III этап) и перевод сценарных образов в индивидуальные и коллективные дорожные карты (IV этап). Преподаватель работает не с абстрактными прогнозами, а с проектными задачами собственной практики.'},
+  {id:'z3', name:'Рефлексивно-интегрирующая зона', short:'Рефлексивно-интегрирующая', stages:[5,6],
+   text:'Осмысление полученного опыта, трансформативная рефлексия профессиональных предпосылок (Дж. Мезироу) и интеграция результатов в систему ценностей и стратегий преподавателя. Завершение работы в зоне означает выход на новый виток спирали с обновлённым уровнем проспективной профессиональной субъектности.'}
+];
+
+const STAGES = [
+ {n:1, roman:'I', name:'Проблематизация', zone:'z1', position:'Аналитик собственной практики',
+  aim:'Диагностика исходных профессиональных установок по отношению к будущему и формирование мотивационной готовности к форсайт-деятельности.',
+  content:['Самодиагностика установок: ретроспективной (воспроизводство сложившихся практик), адаптивной (приспособление к изменениям по мере их наступления), проспективной (предвосхищение изменений и конструирование будущего)','Выявление дефицитов форсайт-компетенции','Формулирование проблемы собственного профессионального развития в горизонте 5–15 лет','Построение персональной ресурсной карты: образовательные задачи, возможности, векторы движения'],
+  requirement:'Деятельностное присвоение; андрагогическое допущение о «потребности знать»',
+  basis:'С.Л. Рубинштейн — принцип единства сознания и деятельности: рефлексия собственных установок есть условие их трансформации',
+  resources:'Диагностические', rgroup:1,
+  modules:['Фасилитация — организация стартовой сессии','Цифровая навигация — обучение работе с диагностическими платформами'],
+  steps:[['Онлайн-диагностика форсайт-компетенции на LMS-платформе','Moodle, iSpring'],['Получение индивидуального профиля в аналитической панели','панель образовательной аналитики LMS'],['Формулирование проблемы профессионального развития в цифровом рефлексивном дневнике','YoNote, Notion, дневник в LMS'],['Построение персональной ресурсной карты на совместной платформе','Miro, MURAL']],
+  product:'Карта профессионального поля; профиль профессиональных дефицитов',
+  assessment:'Рефлексивный отчёт по экспертной рубрике «Тип установки по отношению к будущему»; анкетная методика с трёхуровневой шкалой',
+  applied:'Диагностика собственных задач, которые можно делегировать языковой модели (задание 1 модуля по генеративному ИИ)',
+  tpl:'t1', prompts:[1,2]},
+ {n:2, roman:'II', name:'Сканирование', zone:'z1', position:'Исследователь трендов',
+  aim:'Горизонтальное сканирование: систематическое выявление восходящих трендов, слабых сигналов и системных противоречий, определяющих динамику изменений в высшем образовании.',
+  content:['Идентификация технологических, социальных, экономических, демографических и культурных факторов, влияющих на предметную область и высшее образование','Анализ слабых сигналов — неочевидных, ещё не оформившихся тенденций','Выявление генетически исходных противоречий, порождающих наблюдаемые тренды','Переход от фиксации внешних проявлений изменений к пониманию их внутренней логики'],
+  requirement:'Восхождение от абстрактного к конкретному',
+  basis:'В.В. Давыдов — работа не с готовыми трендами, а с системными противоречиями, которые их порождают: различение эмпирического и теоретического форсайта',
+  resources:'Аналитические', rgroup:2,
+  modules:['Экспертное сопровождение — привлечение отраслевых аналитиков','Фасилитация — организация аналитической сессии'],
+  steps:[['Работа с агрегаторами трендов и базами данных публикаций','eLibrary, Scopus, Futures Platform'],['Использование генеративных ИИ-систем для анализа текстовых массивов и формулирования гипотез','YandexGPT, GigaChat'],['Фиксация выявленных трендов и противоречий на визуальной доске совместной платформы','Miro, MURAL'],['Участие в экспертной видеоконференции для верификации результатов','TrueConf, Сферум']],
+  product:'Аналитическая карта трендов и слабых сигналов',
+  assessment:'Экспертная оценка карты по рубрике: полнота охвата предметной области, корректность идентификации слабых сигналов, выход на системные противоречия, методологическая обоснованность',
+  applied:'Анализ трендов своей предметной области; работа с большими текстовыми массивами через генеративный ИИ; цифровая образовательная аналитика',
+  tpl:'t2', prompts:[3,4]},
+ {n:3, roman:'III', name:'Сценарирование', zone:'z2', position:'Сценарист-проектировщик',
+  aim:'Конструирование альтернативных сценариев развития предметной области, профессии преподавателя и университета в целом.',
+  content:['Разработка 3–4 альтернативных сценариев, различающихся конфигурацией ключевых факторов: технологическая автоматизация, гуманитарный ренессанс, конвергентное развитие, деглобализация','Дельфи-опрос: многоэтапная анонимная экспертная оценка вероятности и желательности каждого сценария','Сценарные мастерские — совместное конструирование детализированных образов профессионального будущего','Различение прогнозирования (наиболее вероятное будущее) и сценарирования (множественные образы возможного, желательного и достижимого будущего)'],
+  requirement:'Совместность деятельности',
+  basis:'Л.С. Выготский — зона ближайшего профессионального развития: совместная сценарная работа выводит за пределы индивидуального горизонта видения будущего',
+  resources:'Совместные', rgroup:3,
+  modules:['Фасилитация — управление сценарной мастерской','Экспертное сопровождение — участие экспертов в Дельфи-панели'],
+  steps:[['Участие в онлайн-Дельфи-опросе через систему опросов','Яндекс Формы, Mentimeter'],['Работа в сценарной мастерской на совместной платформе','Miro, MURAL, Figma'],['Моделирование последствий сценарных развилок с помощью генеративных ИИ-систем','YandexGPT, GigaChat, ChatGPT'],['Визуализация сценариев средствами визуализации данных','Tableau, Power BI']],
+  product:'Сценарная матрица; банк альтернативных сценариев будущего',
+  assessment:'Защита комплекта сценариев перед экспертной панелью по рубрике «Сценарное мышление»: логическая согласованность, альтернативность, методологическая обоснованность, конструктивный характер',
+  applied:'Креативное конструирование сценариев по методологии CRAFT; нарративный дизайн курса («путешествие героя», детектив, симуляция)',
+  tpl:'t3', prompts:[5,6]},
+ {n:4, roman:'IV', name:'Картирование', zone:'z2', position:'Стратег-картограф',
+  aim:'Перевод сценарных образов в конкретные стратегии профессионального действия и индивидуальные дорожные карты.',
+  content:['Разработка индивидуальных и коллективных дорожных карт профессионального развития с горизонтом 3–5 лет (многоуровневые карты — от одного года до пятнадцати лет)','Проектирование стратегий действия в каждом из сконструированных сценариев','Создание прототипов образовательных инноваций — новых курсов, программ, цифровых модулей, адекватных прогнозируемым условиям','Переход от аналитической работы к конструктивной: результаты мышления и коммуникации воплощаются в проектных продуктах'],
+  requirement:'Трёхплановая организация мыследеятельности',
+  basis:'Г.П. Щедровицкий — единство планов мышления, коммуникации и действия: сценарии и экспертная дискуссия воплощаются в дорожных картах',
+  resources:'Проектные', rgroup:4,
+  modules:['Фасилитация — организация проектной сессии','Цифровая навигация — обучение работе с конструкторами дорожных карт'],
+  steps:[['Проектирование индивидуальной дорожной карты в конструкторе дорожных карт','ITONICS, ScMI; Build.in, YoNote, Notion'],['Создание прототипов образовательных инноваций с помощью конструкторов курсов и ИИ-систем','конструкторы курсов, генеративный ИИ'],['Фиксация проектных задач на доске задач','Trello, Yandex Tracker'],['Размещение результатов в цифровом портфолио на LMS-платформе','Moodle, iSpring']],
+  product:'Индивидуальная дорожная карта опережающего профессионального развития',
+  assessment:'Экспертная оценка карты по рубрике: горизонт планирования, согласованность со сценарием, проработанность ключевых точек перехода, измеримость промежуточных результатов; защита перед комиссией',
+  applied:'Карта пути студента по своей дисциплине; прототип образовательной инновации; проектирование программы по моделям ADDIE / 4C/ID; геймификация курса',
+  tpl:'t4', prompts:[7,8]},
+ {n:5, roman:'V', name:'Экспертиза', zone:'z3', position:'Эксперт-коммуникатор',
+  aim:'Презентация и взаимная экспертиза проектных продуктов — дорожных карт, прототипов инноваций, стратегий профессионального развития.',
+  content:['Коллегиальная оценка дорожных карт и проектных решений по критериям реалистичности, инновационности, антропологической состоятельности','Согласование позиций участников и формирование консенсусных представлений о приоритетных направлениях развития','Обратная связь от профессионального сообщества и корректировка индивидуальных стратегий','Публичная защита как механизм перевода коллективно выработанных образов будущего во внутренние регуляторы деятельности'],
+  requirement:'Мотивационная включённость и интериоризация',
+  basis:'А.Н. Леонтьев — интериоризация: публичная защита и экспертное обсуждение переводят внешние образы будущего во внутренние схемы профессионального действия',
+  resources:'Коммуникативные', rgroup:5,
+  modules:['Фасилитация — организация экспертной сессии','Рефлексивное сопровождение — организация промежуточной рефлексии'],
+  steps:[['Презентация дорожной карты на видеоконференции','TrueConf, Сферум, Zoom'],['Прохождение коллегиальной экспертизы через систему рецензирования и голосования','Яндекс Формы, Mentimeter'],['Получение структурированной обратной связи в цифровом портфолио','портфолио на LMS'],['Корректировка дорожной карты с учётом экспертных рекомендаций','конструктор дорожных карт']],
+  product:'Экспертный лист; рецензия на сценарий и дорожную карту коллеги',
+  assessment:'Оценка по протоколу Дельфи-процедуры: полнота и аргументированность экспертных суждений, конструктивность обратной связи, способность к согласованию приоритетов',
+  applied:'Экспертиза прототипов коллег; освоение генеративного ИИ как «черновика обратной связи» (задание 6 модуля по ИИ)',
+  tpl:'t5', prompts:[9,10]},
+ {n:6, roman:'VI', name:'Интеграция', zone:'z3', position:'Рефлексивный практик',
+  aim:'Трансформативная рефлексия результатов форсайт-деятельности и ценностное самоопределение преподавателя.',
+  content:['Содержательная рефлексия: какие образы будущего сконструированы, какие стратегии разработаны','Процессуальная рефлексия: как получены результаты, какие методы и цифровые инструменты оказались продуктивными','Рефлексия предпосылок: критический пересмотр базовых допущений о природе образования, роли преподавателя, ценности профессионального развития','Ценностное самоопределение: соотнесение сценариев и дорожных карт с собственными аксиологическими ориентирами; запрос на новый виток спирали'],
+  requirement:'Трансформативная рефлексия; ценностное самоопределение',
+  basis:'Дж. Мезироу — три типа рефлексии; В.И. Слободчиков — форсайт как антропопрактика, в которой преподаватель выступает субъектом опережающего развития',
+  resources:'Рефлексивные', rgroup:6,
+  modules:['Рефлексивное сопровождение — организация трансформативной рефлексии','Фасилитация — завершающая сессия цикла'],
+  steps:[['Трёхуровневая рефлексия в цифровом рефлексивном дневнике: содержание, процесс, предпосылки','YoNote, Notion, дневник в LMS'],['Анализ динамики профессиональных установок по данным образовательной аналитики LMS','панель аналитики LMS'],['Формулирование ценностно обоснованной стратегии профессионального развития','рефлексивный протокол'],['Фиксация итогов цикла в цифровом портфолио; формулирование запроса на новый виток спирали','портфолио на LMS']],
+  product:'Рефлексивное портфолио; итоговый рефлексивный отчёт по структурированной форме',
+  assessment:'Экспертная оценка отчёта по рубрике «Глубина и тип рефлексии» с дифференциацией по трём типам',
+  applied:'Мини-портфолио цифровых решений с ИИ для своего курса; вывод о потенциале и ограничениях нейросетей в собственной практике',
+  tpl:'t6', prompts:[11,12]}
+];
+
+const RGROUPS = [
+ {n:1, name:'Диагностические', stage:1, requirement:'Деятельностное присвоение', fn:'Входная диагностика и формирование мотивационной основы для включения в форсайт-деятельность',
+  items:[['Онлайн-опросники и тесты','оценка сформированности компонентов форсайт-компетенции','Яндекс Формы, Google Forms, тесты в Moodle / iSpring'],['Самодиагностика установок','ретроспективный / адаптивный / проспективный тип отношения к будущему','анкета в LMS, Яндекс Формы'],['Аналитические панели','индивидуальный и групповой профиль по результатам диагностики','аналитика LMS, Яндекс DataLens']]},
+ {n:2, name:'Аналитические', stage:2, requirement:'Восхождение от абстрактного к конкретному', fn:'Информационное и аналитическое обеспечение горизонтального сканирования, расширение когнитивного горизонта',
+  items:[['Платформы мониторинга трендов','агрегация данных о технологических, социальных, экономических, демографических изменениях','Futures Platform, агрегаторы трендов'],['Базы данных публикаций и патентов','динамика исследовательских направлений и технологических прорывов','eLibrary, Scopus, Google Scholar'],['Генеративные ИИ-системы','анализ больших текстовых массивов, выявление латентных закономерностей, гипотезы','YandexGPT, GigaChat, ChatGPT'],['Инструменты визуализации данных','наглядное представление тенденций и корреляций','Tableau, Power BI, Яндекс DataLens']]},
+ {n:3, name:'Совместные', stage:3, requirement:'Совместность деятельности', fn:'Инструментальное и коммуникативное обеспечение коллективной сценарной работы в синхронном и асинхронном форматах',
+  items:[['Платформы совместного проектирования','визуальные доски, стикеры, голосования, таймеры','Miro, MURAL, Figma, ЭсБорд'],['Инструменты сценарного моделирования','конструирование и параметрическое варьирование сценариев','сценарная матрица на доске, Notion'],['Средства Дельфи-опросов','многоэтапный анонимный опрос с агрегированием результатов','Яндекс Формы, Mentimeter'],['Генеративные ИИ-системы','моделирование последствий развилок, альтернативные нарративы будущего','YandexGPT, GigaChat, ChatGPT']]},
+ {n:4, name:'Проектные', stage:4, requirement:'Трёхплановая организация', fn:'Переход от аналитической к конструктивной деятельности: перевод сценарных образов в проектные продукты',
+  items:[['Конструкторы дорожных карт','временные линии с ключевыми точками, ресурсами и условиями перехода','ITONICS, ScMI; Build.in, YoNote, Notion'],['LMS-платформы','размещение материалов, управление модулями, отслеживание прогресса','Moodle, iSpring, Stepik'],['Средства прототипирования инноваций','конструкторы курсов, генераторы материалов на базе ИИ, интерактивные модули','конструкторы курсов, LearningApps, генеративный ИИ'],['Доски задач и трекеры','управление проектной активностью, фиксация промежуточных результатов','Trello, Yandex Tracker']]},
+ {n:5, name:'Коммуникативные', stage:5, requirement:'Мотивационная включённость и интериоризация', fn:'Коммуникативное обеспечение экспертного взаимодействия',
+  items:[['Платформы видеоконференций','совместный экран, комнаты для групповой работы, запись сессий','TrueConf, Сферум, Zoom'],['Системы рецензирования и голосования','структурированная коллегиальная оценка','Яндекс Формы, Mentimeter'],['Цифровые портфолио','накопительная фиксация процесса и результатов форсайт-деятельности','портфолио в LMS, Notion, YoNote'],['Системы обратной связи','многоканальная коммуникация участников экспертного процесса','чаты и каналы, комментарии в портфолио']]},
+ {n:6, name:'Рефлексивные', stage:6, requirement:'Трансформативная рефлексия; ценностное самоопределение', fn:'Глубинная рефлексия и долгосрочный мониторинг реализации дорожных карт',
+  items:[['Цифровые рефлексивные дневники','фиксация осмысления предпосылок, динамики ценностных установок','YoNote, Notion, дневник в LMS'],['Системы образовательной аналитики','визуализация траектории прохождения цикла и динамики форсайт-компетенции','аналитика LMS'],['Системы мониторинга профессионального развития','отслеживание реализации дорожных карт в долгосрочной перспективе','портфолио, трекер карты']]}
+];
+
+const INFRA = [
+ ['Информационно-содержательный уровень','базы данных научных публикаций, аналитические платформы, генеративные ИИ-системы, открытые образовательные ресурсы'],
+ ['Организационно-управленческий уровень','LMS-платформы, совместные платформы, системы видеоконференцсвязи, специализированные форсайт-платформы'],
+ ['Аналитический уровень','системы образовательной аналитики, инструменты визуализации данных, цифровые портфолио и рефлексивные дневники']
+];
+
+const CONDITIONS = [
+ {g:'Методико-технологические условия', basis:'Деятельностный подход', items:[
+   ['Наличие содержательно-процессуальной модели','шестиэтапная модель с шестью позициями и шестью группами цифровых ресурсов'],
+   ['Обеспеченность каждого этапа комплектом методических материалов','сценарные карты, шаблоны дорожных карт, протоколы Дельфи-опросов, руководства по горизонтальному сканированию, рефлексивные протоколы'],
+   ['Интеграция цифровых платформ и инструментов','настроенная цифровая среда для каждого этапа, цифровые шаблоны'],
+   ['Адаптивность содержания','к предметной области, уровню цифровой зрелости и стажу преподавателя; персонализация маршрутов в LMS']]},
+ {g:'Организационно-рефлексивные условия', basis:'Андрагогический и антропологический подходы', items:[
+   ['Формирование рефлексивной позиции субъекта профессионального развития','стартовая проблематизирующая сессия: диагностика установок, осознание ограничений ретроспективной модели'],
+   ['Обеспечение позиционной динамики','аналитик → исследователь → сценарист → стратег → эксперт → рефлексивный практик'],
+   ['Организация рефлексивных процедур трёх типов на каждом этапе','содержательная, процессуальная, рефлексия предпосылок; рефлексивные паузы, протоколы, групповые сессии'],
+   ['Создание со-бытийной общности участников','междисциплинарный состав 12–20 человек, открытый характер ситуаций, ритуализация ключевых моментов']]},
+ {g:'Нормативно-правовые условия', basis:'Институциональная рамка непрерывного образования взрослых', items:[
+   ['Соответствие профессиональному стандарту педагога','результаты квалифицируемы как вклад в проектировочную, аналитическую, прогностическую компетенции'],
+   ['Интеграция в программы ДПО','самостоятельная программа 72–108 часов, модуль переподготовки, корпоративный форсайт-проект, элемент наставничества'],
+   ['Признание результатов в системе аттестации','дорожные карты, сценарные модели, прототипы, портфолио — при аттестации, конкурсном отборе, представлении к званиям'],
+   ['Соответствие законодательным требованиям к цифровым ресурсам','персональные данные, электронное обучение и дистанционные технологии']]}
+];
+
+const MODULES = [
+ ['Фасилитация','Процессуальное сопровождение форсайт-сессий: организация групповой работы, модерация дискуссий, удержание продуктивного конфликта позиций. Фасилитатор не носитель «правильных» сценариев — он обеспечивает качество процесса, а не предопределяет результат.'],
+ ['Экспертное сопровождение','Содержательная поддержка со стороны отраслевых аналитиков и исследователей будущего: верификация результатов сканирования, участие в Дельфи-панели.'],
+ ['Рефлексивное сопровождение','Организация трёхуровневой трансформативной рефлексии: промежуточной на этапе экспертизы и итоговой на этапе интеграции.'],
+ ['Цифровая навигация','Техническая поддержка работы с цифровыми ресурсами: диагностические платформы, конструкторы дорожных карт, портфолио.']
+];
+
+const REQUIREMENTS = [
+ ['Восхождение от абстрактного к конкретному','от генетически исходных противоречий — к сценариям — к стратегиям действия (В.В. Давыдов)','аналитические ресурсы, II этап'],
+ ['Деятельностное присвоение','метод присваивается только через применение к собственной задаче, а не через информирование (С.Л. Рубинштейн)','диагностические ресурсы, I этап'],
+ ['Совместность деятельности','форматы совместной работы, выводящие за пределы индивидуального горизонта видения будущего (Л.С. Выготский)','совместные ресурсы, III этап'],
+ ['Мотивационная включённость','механизмы интериоризации: перевод коллективных образов будущего во внутренние регуляторы (А.Н. Леонтьев)','коммуникативные ресурсы, V этап'],
+ ['Трёхплановая организация','единство мышления, коммуникации и действия — предотвращение редукции форсайта к интеллектуальному упражнению (Г.П. Щедровицкий)','проектные ресурсы, IV этап'],
+ ['Трансформативная рефлексия','содержательная, процессуальная рефлексия и рефлексия предпосылок на каждом этапе (Дж. Мезироу)','рефлексивные ресурсы, VI этап'],
+ ['Ценностное самоопределение','форсайт как антропопрактика: преподаватель — субъект опережающего развития, а не объект доучивания (В.И. Слободчиков)','рефлексивные ресурсы, VI этап']
+];
+
+const LEVELS = {
+ mc:['Отсутствие устойчивой установки на опережающее развитие; ретроспективная ориентация; неприятие ценности работы с образами будущего','Фрагментарный интерес; адаптивная установка — готовность приспосабливаться по мере наступления изменений; внешне детерминированная мотивация','Внутренняя установка на опережающее развитие; проспективная ориентация; устойчивая ценностно-смысловая включённость в работу с образами будущего'],
+ kp:['Неспособность к сценарному мышлению; отсутствие навыков горизонтального сканирования и выявления противоречий','Воспроизведение отдельных элементов сценарного мышления и сканирования при внешней методической поддержке','Самостоятельное конструирование альтернативных сценариев, выявление генетически исходных противоречий, дорожное картирование'],
+ od:['Эпизодическое применение отдельных цифровых инструментов; затруднённая рефлексия проектных продуктов','Владение частью методов форсайт-деятельности и цифровых ресурсов при внешней поддержке','Интеграция сканирования, сценарирования, картирования и Дельфи в целостный цикл; осознанная рефлексия продуктов']
+};
+
+const RESULTS = [ // Таблица 14 — доля преподавателей на оптимальном уровне после ОЭР, %
+ {k:'Sмц', name:'Мотивационно-ценностный', kg:16.4, eg:52.7},
+ {k:'Sкп', name:'Когнитивно-прогностический', kg:18.2, eg:58.2},
+ {k:'Sод', name:'Операционально-деятельностный', kg:24.5, eg:56.4},
+ {k:'Sинт', name:'Интегральный показатель', kg:20.0, eg:54.5}
+];
+
+const DIAG_Q = [
+ {q:'Когда в вузе объявляют о новой технологии или требовании, моя первая реакция —', o:['дождаться, пока практика устоится, и работать как прежде','освоить то, что потребуется, когда это станет обязательным','заранее прикинуть, как это изменит мой курс через 3–5 лет, и подготовить варианты']},
+ {q:'Своё профессиональное будущее я представляю', o:['как продолжение того, что уже умею делать хорошо','как последовательность ответов на изменения, которые придут извне','как несколько возможных сценариев, между которыми я выбираю и под которые строю стратегию']},
+ {q:'Тренды в своей предметной области я', o:['замечаю, когда они уже коснулись моей работы','отслеживаю, чтобы вовремя адаптироваться','систематически сканирую и спрашиваю, какое противоречие за ними стоит']},
+ {q:'Новости о генеративном ИИ в образовании вызывают у меня', o:['желание отгородить свой курс от этого','готовность разобраться, если потребуют','интерес к тому, какие задачи моего курса это переопределит и что я могу сделать первой/первым']},
+ {q:'Планирование своего развития на горизонте пяти лет', o:['мне не кажется осмысленным — слишком многое меняется','я веду в общих чертах, корректируя по ходу','я оформляю в дорожную карту с ключевыми точками и возвращаюсь к ней при каждом значимом событии']},
+ {q:'Если коллега предлагает обсудить альтернативные сценарии развития нашего факультета, я', o:['считаю это отвлечённым занятием','участвую, если это полезно для текущих задач','вижу в этом способ выйти за пределы собственного горизонта и согласовать приоритеты']},
+ {q:'Свой опыт повышения квалификации я оцениваю прежде всего по тому,', o:['подтвердил ли он то, что я уже знаю','закрыл ли он актуальные дефициты','изменил ли он мои допущения о том, каким должно быть образование']},
+ {q:'Когда проектирую новый курс, я исхожу из', o:['сложившихся форматов, которые работали раньше','текущих требований программы и студентов','прогнозируемых условий, в которых выпускники будут работать через несколько лет']},
+ {q:'Рефлексию собственной практики я', o:['провожу редко — результат и так виден','провожу, когда что-то не получилось','веду регулярно, различая, что сделано, как сделано и какие допущения стоит пересмотреть']}
+];
+
+const PROMPTS = [
+ {id:1, stage:1, title:'Профиль профессиональных установок по отношению к будущему', text:`<b>Контекст.</b> Я преподаватель вуза, дисциплина — [дисциплина], стаж — [N] лет. Прохожу этап проблематизации форсайт-цикла и хочу увидеть собственные установки по отношению к будущему со стороны.
+<b>Задание.</b> Ниже — мои ответы на вопросы о том, как я реагирую на изменения в образовании: [вставьте 5–7 ответов своими словами]. Определи, какая установка доминирует — ретроспективная (воспроизводство сложившихся практик), адаптивная (приспособление по мере наступления изменений) или проспективная (предвосхищение и конструирование будущего), — и покажи, на каких формулировках это видно.
+<b>Формат ответа.</b> Три абзаца: доминирующая установка с цитатами из моих ответов; признаки двух других установок, если они есть; три вопроса, которые помогли бы мне проверить этот вывод.
+<b>Требования.</b> Не давай оценок «хорошо/плохо». Не придумывай факты обо мне. Пиши по-русски, без общих рекомендаций.`},
+ {id:2, stage:1, title:'Формулировка проблемы профессионального развития в горизонте 5–15 лет', text:`<b>Контекст.</b> Я преподаватель [дисциплина] в [тип вуза]. Основные задачи моей работы сейчас: [3–4 задачи]. Что меня беспокоит в перспективе: [2–3 тревоги или дефицита].
+<b>Задание.</b> Помоги переформулировать мои тревоги в одну проблему профессионального развития, пригодную для форсайт-работы: противоречие между тем, что происходит в высшем образовании, и тем, как устроена моя практика. Предложи три варианта формулировки с горизонтом 5, 10 и 15 лет.
+<b>Формат ответа.</b> Таблица: горизонт | формулировка проблемы (одно предложение вида «между … и …») | что мне нужно узнать, чтобы с ней работать.
+<b>Требования.</b> Опирайся только на то, что я написал(а). Не предлагай готовых решений — только формулировки проблемы и вопросы.`},
+ {id:3, stage:2, title:'Горизонтальное сканирование: факторы и слабые сигналы', text:`<b>Контекст.</b> Предметная область — [область], целевой горизонт — [5–10] лет. Я исследователь трендов на этапе сканирования и работаю с массивом текстов: [вставьте фрагменты аннотаций, новостей, документов или перечислите источники].
+<b>Задание.</b> Выдели из этого массива технологические, социальные, экономические, демографические и культурные факторы, влияющие на мою область и на высшее образование. Отдельно отметь слабые сигналы — ещё не оформившиеся тенденции, упомянутые редко, но потенциально определяющие.
+<b>Формат ответа.</b> Таблица: фактор | тип (Т/С/Э/Д/К) | свидетельство в тексте | тренд или слабый сигнал | на что влияет в моей дисциплине.
+<b>Требования.</b> Каждую строку подкрепляй ссылкой на конкретное место в предоставленном массиве. Если данных недостаточно, скажи об этом явно, а не домысливай.`},
+ {id:4, stage:2, title:'Выход на генетически исходное противоречие', text:`<b>Контекст.</b> По результатам сканирования я зафиксировал(а) следующие тренды и слабые сигналы в своей области: [список 6–10 позиций].
+<b>Задание.</b> Помоги восходить от этих эмпирических трендов к их основаниям: какие системные противоречия порождают эту группу трендов? Проверь гипотезы вида «противоречие между нарастающей сложностью знания и когнитивными ресурсами индивидуального субъекта», «между конвергенцией технологий и дисциплинарной организацией знания», «между потребностью в персонализации и логикой массового образования» — и предложи свои, если они подходят лучше.
+<b>Формат ответа.</b> Для каждого противоречия: формулировка | какие из моих трендов оно порождает | как оно проявится в моей дисциплине через 5–10 лет.
+<b>Требования.</b> Не более трёх противоречий. Показывай связь каждого противоречия с конкретными трендами из моего списка; не вводи тренды, которых у меня нет.`},
+ {id:5, stage:3, title:'Сценарные оси и четыре альтернативных сценария', text:`<b>Контекст.</b> Ключевые противоречия моей области: [2–3 противоречия]. Горизонт — [год]. Работаю в позиции сценариста-проектировщика; сценарии нужны для сценарной мастерской и последующего Дельфи-опроса.
+<b>Задание.</b> Предложи две сценарные оси (два неопределённых фактора с полярными исходами) и опиши четыре сценария развития моей предметной области и профессии преподавателя в их пересечении — по образцу конфигураций «технологическая автоматизация», «гуманитарный ренессанс», «конвергентное развитие», «деглобализация», но с привязкой к моей области.
+<b>Формат ответа.</b> Для каждого сценария: название | конфигурация осей | что происходит с содержанием дисциплины | что происходит с ролью преподавателя | ранний индикатор, по которому я пойму, что этот сценарий реализуется.
+<b>Требования.</b> Сценарии должны быть действительно альтернативными, а не градациями одного. Не выбирай «правильный» сценарий — это задача Дельфи-панели.`},
+ {id:6, stage:3, title:'Моделирование последствий сценарной развилки', text:`<b>Контекст.</b> Сценарий: [название и краткое описание]. Развилка: [событие или решение, которое может пойти двумя путями].
+<b>Задание.</b> Смоделируй последствия обоих путей развилки для трёх субъектов — студента, преподавателя, университета — на горизонте 1 года, 3 и 5 лет.
+<b>Формат ответа.</b> Две таблицы (по одной на путь): субъект | через 1 год | через 3 года | через 5 лет. После таблиц — три вопроса для обсуждения в сценарной мастерской.
+<b>Требования.</b> Опирайся на причинно-следственные связи, а не на оценки желательности. Отмечай, где прогноз наименее надёжен.`},
+ {id:7, stage:4, title:'Альтернативные конфигурации дорожной карты', text:`<b>Контекст.</b> Я стратег-картограф. Выбранный сценарий: [название]. Моя цель профессионального развития на 3–5 лет: [цель]. Исходное состояние: [компетенции, ресурсы, ограничения]. Горизонты карты: 1 год, 3 года, 5 лет.
+<b>Задание.</b> Сгенерируй три альтернативные конфигурации дорожной карты: консервативную, ускоренную и ориентированную на новую роль. Для каждой зафиксируй ключевые точки перехода, ресурсы и условия перехода между точками.
+<b>Формат ответа.</b> Три таблицы: горизонт | ключевая точка | что должно быть сделано | необходимые ресурсы | измеримый индикатор достижения.
+<b>Требования.</b> Каждая ключевая точка должна быть проверяемой. Не предлагай одинаковых шагов во всех трёх конфигурациях — различия должны быть содержательными.`},
+ {id:8, stage:4, title:'Проверка согласованности карты со сценарием', text:`<b>Контекст.</b> Ниже — моя дорожная карта: [вставьте таблицу горизонт | ключевая точка | ресурсы | индикатор]. Целевой сценарий: [описание].
+<b>Задание.</b> Проверь согласованность карты со сценарием: какие ключевые точки работают на сценарий, какие нейтральны, какие ему противоречат. Проверь также реалистичность сроков и измеримость индикаторов.
+<b>Формат ответа.</b> Таблица: ключевая точка | связь со сценарием (работает / нейтральна / противоречит) | комментарий | предложение по уточнению. В конце — три самых рискованных допущения карты.
+<b>Требования.</b> Не переписывай карту целиком. Предлагай уточнения, а не замены целей.`},
+ {id:9, stage:5, title:'Черновик экспертного заключения на дорожную карту коллеги', text:`<b>Контекст.</b> Я эксперт-коммуникатор на этапе коллегиальной экспертизы. Дорожная карта коллеги: [вставьте карту]. Критерии экспертизы: реалистичность, инновационность, антропологическая состоятельность (карта работает на развитие человека, а не только на показатели).
+<b>Задание.</b> Подготовь черновик экспертного заключения по трём критериям с аргументами, привязанными к конкретным пунктам карты, и тремя вопросами автору.
+<b>Формат ответа.</b> По каждому критерию: сильные стороны | ограничения | вопрос автору. Итог — одно предложение о главном условии реализуемости карты.
+<b>Требования.</b> Это черновик для моей собственной экспертизы: я сравню его со своим суждением. Формулируй конструктивно, без оценок личности автора.`},
+ {id:10, stage:5, title:'Согласование приоритетов после экспертной сессии', text:`<b>Контекст.</b> На экспертной сессии группа из [N] преподавателей обсудила дорожные карты. Позиции участников по приоритетам развития: [перечислите кратко, кто что считает приоритетом].
+<b>Задание.</b> Помоги подготовить материал для согласования: выдели совпадающие приоритеты, точки расхождения и предложи формулировки консенсусных приоритетов, которые можно вынести на голосование во втором туре Дельфи.
+<b>Формат ответа.</b> Три списка: совпадения | расхождения с указанием, чьи позиции расходятся | 3–5 формулировок для голосования.
+<b>Требования.</b> Не сглаживай расхождения — они должны быть видны. Формулировки для голосования — не длиннее одного предложения каждая.`},
+ {id:11, stage:6, title:'Трёхуровневая рефлексия цикла', text:`<b>Контекст.</b> Я завершаю форсайт-цикл в позиции рефлексивного практика. Мои записи из рефлексивного дневника: [вставьте заметки по этапам].
+<b>Задание.</b> Помоги структурировать записи по трём типам рефлексии: содержательная (что сделано и узнано), процессуальная (как получены результаты, какие методы и инструменты сработали), рефлексия предпосылок (какие допущения о природе образования и роли преподавателя пересмотрены). Задай по два вопроса к каждому типу там, где записи неполны.
+<b>Формат ответа.</b> Три раздела по типам рефлексии: что уже есть в записях | чего не хватает | вопросы.
+<b>Требования.</b> Не дописывай за меня содержание рефлексии. Отдели мои формулировки от своих вопросов.`},
+ {id:12, stage:6, title:'Запрос на новый виток спирали', text:`<b>Контекст.</b> Итоги цикла: дорожная карта [краткое описание], основной вывод рефлексии [вывод], главное изменившееся допущение [допущение]. Сроки ближайших значимых событий: [аттестация, новый семестр, новая технология].
+<b>Задание.</b> Помоги сформулировать запрос на новый виток форсайт-цикла: какую проблему развития я ставлю теперь, на каком уровне она отличается от исходной, какой этап цикла потребует наибольшего внимания и к какой дате я планирую вернуться к карте.
+<b>Формат ответа.</b> Четыре строки: новая проблема | чем она отличается от исходной | критический этап нового витка и почему | дата и повод возвращения к карте.
+<b>Требования.</b> Формулировки — мои, в первом лице. Никаких общих советов по саморазвитию.`},
+ {id:13, stage:0, title:'Стилизация учебного фрагмента под три аудитории', text:`<b>Контекст.</b> Фрагмент моего курса (не более 150 слов): [вставьте текст]. Дисциплина — [дисциплина].
+<b>Задание.</b> Преобразуй фрагмент трижды: а) объяснение для школьника 9 класса; б) объяснение для взрослого слушателя программы ДПО; в) краткое объяснение через одну метафору.
+<b>Формат ответа.</b> Три подписанных варианта, затем таблица: аудитория | цель | что изменилось в структуре и лексике.
+<b>Требования.</b> Сохраняй фактическую точность исходного фрагмента. Не добавляй сведений, которых в нём нет.`},
+ {id:14, stage:0, title:'Кейс и три задания разного уровня', text:`<b>Контекст.</b> Тема моего курса: [тема]. Образовательный результат: [что студент должен уметь]. Формат курса: [очный / смешанный / дистанционный].
+<b>Задание.</b> Сгенерируй обучающий кейс по теме и три практических задания к нему — базовое, продвинутое, творческое.
+<b>Формат ответа.</b> Кейс (до 200 слов) | задание 1 с критерием выполнения | задание 2 с критерием | задание 3 с критерием.
+<b>Требования.</b> Каждое задание должно проверять заявленный результат, а не пересказ кейса. Укажи, что в кейсе придумано и требует проверки преподавателем.`},
+ {id:15, stage:0, title:'Инструмент оценки под заявленную цель', text:`<b>Контекст.</b> Цель обучения, которую нужно проверить: [цель]. Уровень студентов: [курс, направление].
+<b>Задание.</b> Составь инструмент оценки: а) 5 тестовых заданий с одним верным вариантом; б) 2 ситуационных задания с открытым ответом; в) критерии оценки одного из ситуационных заданий по шкале 0–10.
+<b>Формат ответа.</b> Тест с указанием верного варианта | два ситуационных задания | таблица критериев: критерий | 0–3 | 4–7 | 8–10.
+<b>Требования.</b> Каждое задание должно быть согласовано с целью обучения; поясни одной фразой, какой аспект цели проверяет каждое задание.`}
+];
+
+const TEMPLATES = [
+ {id:'t1', stage:1, title:'Персональная ресурсная карта', intro:'Продукт I этапа. Заполняется после самодиагностики установки и фиксирует проблему развития в горизонте 5–15 лет.',
+  fields:[['problem','Проблема профессионального развития','Противоречие между тем, что происходит в высшем образовании, и тем, как устроена моя практика; горизонт 5–15 лет','ta'],['deficits','Дефициты форсайт-компетенции','Чего не хватает: сценарное мышление, сканирование, дорожное картирование, работа с цифровыми ресурсами','ta'],['tasks','Образовательные задачи','Что нужно освоить, чтобы работать с проблемой','ta'],['assets','Возможности и ресурсы','Опыт, сообщества, платформы, время, поддержка','ta'],['vectors','Векторы движения','2–3 направления в форсайт-пространстве','ta']]},
+ {id:'t2', stage:2, title:'Карта трендов и слабых сигналов', intro:'Продукт II этапа. Оценивается по полноте охвата, корректности слабых сигналов, выходу на противоречия и обоснованности.',
+  fields:[['tech','Технологические факторы','тренды и слабые сигналы с указанием источника','ta'],['soc','Социальные и культурные факторы','','ta'],['econ','Экономические и демографические факторы','','ta'],['weak','Слабые сигналы','ещё не оформившиеся тенденции: что замечено, где, почему это может стать определяющим','ta'],['contra','Генетически исходные противоречия','1–3 противоречия, порождающие выявленные тренды','ta']]},
+ {id:'t3', stage:3, title:'Сценарная матрица', intro:'Продукт III этапа. Две сценарные оси задают четыре альтернативных сценария; каждый затем оценивается в Дельфи-опросе по вероятности и желательности.', matrix:true,
+  fields:[['axisA','Ось А','неопределённый фактор и его полюса, например: «автоматизация учебного процесса: высокая ↔ низкая»','in'],['axisB','Ось Б','например: «открытость образования: глобальная ↔ локальная»','in'],['q1','Сценарий 1 (А+, Б+)','название; содержание дисциплины; роль преподавателя; ранний индикатор','ta'],['q2','Сценарий 2 (А+, Б−)','','ta'],['q3','Сценарий 3 (А−, Б+)','','ta'],['q4','Сценарий 4 (А−, Б−)','','ta'],['delphi','Итоги Дельфи-опроса','вероятность и желательность каждого сценария по оценке панели','ta']]},
+ {id:'t4', stage:4, title:'Дорожная карта опережающего развития', intro:'Продукт IV этапа. Горизонт 3–5 лет, согласованный с выбранным сценарием; каждая ключевая точка имеет измеримый индикатор.',
+  fields:[['scenario','Целевой сценарий','к какому сценарию привязана карта','in'],['goal','Стратегическая цель на 3–5 лет','','in'],['h1','Горизонт 1 год','ключевая точка | что сделать | ресурсы | индикатор','ta'],['h3','Горизонт 3 года','','ta'],['h5','Горизонт 5 лет','','ta'],['h15','Горизонт 10–15 лет (ориентир)','','ta'],['proto','Прототип образовательной инновации','новый курс, программа, цифровой модуль, адекватный прогнозируемым условиям','ta']]},
+ {id:'t5', stage:5, title:'Экспертный лист', intro:'Инструмент V этапа. Коллегиальная оценка дорожной карты коллеги по трём критериям с аргументами и вопросами автору.',
+  fields:[['author','Автор и название карты','','in'],['real','Реалистичность','оценка 1–10 и аргументы: сроки, ресурсы, измеримость','ta'],['innov','Инновационность','оценка 1–10 и аргументы: новизна проектных решений','ta'],['anthro','Антропологическая состоятельность','оценка 1–10 и аргументы: работает ли карта на развитие человека, а не только на показатели','ta'],['questions','Вопросы автору','три вопроса','ta'],['cond','Главное условие реализуемости','одно предложение','in']]},
+ {id:'t6', stage:6, title:'Рефлексивный протокол трёх типов', intro:'Продукт VI этапа. Три типа рефлексии по Дж. Мезироу и запрос на новый виток спирали.',
+  fields:[['content','Содержательная рефлексия','что сделано и узнано: какие тренды выявлены, какие сценарии сконструированы, какие стратегии разработаны','ta'],['process','Процессуальная рефлексия','как получены результаты: методы, трудности, взаимодействие в группе, эффективность цифровых инструментов','ta'],['premise','Рефлексия предпосылок','какие базовые допущения о природе образования, роли преподавателя и ценности развития пересмотрены','ta'],['values','Ценностное самоопределение','какие стратегии отобраны как антропологически состоятельные','ta'],['next','Запрос на новый виток спирали','новая проблема развития; критический этап; дата возвращения к карте','ta']]}
+];
+
+const LECTURES = [
+ {id:'l-gam', stage:4, title:'Геймификация курса как прикладная задача картирования', lead:'Геймификация в технологии — не декоративная надстройка, а способ проектирования курса по сценарию: образовательный результат → учебная стратегия → метод оценки → игровая механика. Осваивая её на материале собственного курса, преподаватель присваивает метод картирования.',
+  sections:[
+   ['Цели внедрения — в формате чек-листа','Формулируются 3–5 измеримых целей: повысить активность студентов в обсуждениях; довести долю выполнения финального проекта до 80 % и выше; снизить отток после первого теста; поднять удовлетворённость курсом до 4,5 из 5 по итогам опроса. Цель без индикатора не считается целью.'],
+   ['Карта пути студента (Learning Journey Map)','Для 2–3 модулей курса фиксируются цели модуля, содержание и форматы, ожидаемые действия студента, способы оценки, мотивационные триггеры и формы поддержки. Фазы пути: ориентация, погружение, консолидация, вызов, трансформация, завершение. Карта пути — это дорожное картирование, применённое к курсу.'],
+   ['Согласование результата, стратегии, оценки и механики','Образовательный результат «студент умеет формулировать цель и задачи проекта» → разбор кейсов и шаблоны → составление проектной карты → механика «Миссия стартапа». Результат «знает этапы проектного цикла» → интерактивный лонгрид → тест на последовательность → «Маршрут проекта» с чекпоинтами. Результат «умеет презентовать проект» → разбор примеров → защита проекта → «Инвесторский питч». Результат «выявляет риски» → работа с антиреференсами и риск-матрицами → задание на описание рисков → «Аварийный режим».'],
+   ['Модели обучения и игровые формы','Бихевиоризм — «награда за серию» (пять выполненных заданий дают бонус). Конструктивизм — квест с выбором маршрута. Проблемное обучение — нарратив «чрезвычайная ситуация»: у группы 24 часа. Коннективизм — «экспедиция знаний»: обмен знаниями даёт очки и ресурсы. Обучение через опыт — симуляции и роли («вы консультант стартапа»). Когнитивное ученичество — «Гильдия мастеров»: новичок получает ранги рядом с экспертом.'],
+   ['Оценка эмоциональной вовлечённости','Короткая форма из 3–4 вопросов после раздела: насколько интересным был раздел; какое задание оказалось полезным; что улучшить; одно слово о том, что чувствуете после завершения. Собирается через Яндекс Формы или Google Forms и читается вместе с аналитикой LMS.']]},
+ {id:'l-narr', stage:3, title:'Нарративный дизайн курса', lead:'Нарратив консолидирует модули курса в единую смысловую рамку и даёт преподавателю опыт сценарирования: та же работа с ролью, сюжетной линией и развилками, которая на III этапе применяется к собственному профессиональному будущему.',
+  sections:[
+   ['Этап 1. Исследование аудитории и культурных кодов','Какие элементы массовой культуры близки студентам, какие архетипы и нарративы вызывают отклик. Выбор канона: «путешествие героя», детективное расследование, ролевая симуляция профессии, психогеография (курс как восхождение на гору).'],
+   ['Этап 2. Генерация идей','Мозговой штурм и ассоциативный анализ; языковые модели для генерации сюжетов, героев, метафор; методология CRAFT; систематизация через mind map и card sorting. Не каждая программа требует фантазийного нарратива: «профессиональное становление специалиста», «проектная лаборатория», «цифровая экспедиция» часто работают лучше.'],
+   ['Этап 3. Визуальные и сюжетные референсы','Визуальные базы (Pinterest, Behance, Dribbble) и медийные источники — кино, сериалы, игры, визуальные новеллы — как источник стилистических и нарративных решений, адаптируемых к дидактическому формату.'],
+   ['Этап 4. Сборка концепта','Основная идея (путешествие, экспедиция, миссия, симуляция); роль обучающегося (исследователь, герой, агент изменений, архитектор); сюжетная линия (начало, препятствия, кульминация, развязка); визуальная реализация (комиксы, прототипы в Figma, карточки персонажей); связи с геймификацией (прогресс, бейджи, миссии, ветвления); место в карте пути студента.'],
+   ['Этап 5. Реализация в среде','YoNote — архитектура курса и сценарное продвижение; Figma — визуальный нарратив; Яндекс Формы / Quizlet — интерактивные задания и система достижений. Пример: курс французского языка как иммерсивное проживание жизни персонажа, переехавшего во Францию: заселение, документы, культура; очки опыта, бейджи «Документальный эксперт», «Мастер гастрономии», прогресс-бар.']]},
+ {id:'l-craft', stage:3, title:'Креативная методология CRAFT', lead:'CRAFT (Creative Algorithms, Frames & Tools) переводит проектирование курса из репродуктивной логики «лекция — семинар — зачёт» в сценарную. Ключевое понятие — идея-фрейм.',
+  sections:[
+   ['Базовый фрейм и идея-фрейм','Базовый фрейм — статус-кво, привычная логика взаимодействия. Идея-фрейм — переопределённый контекст, в который погружается студент и в котором ему предстоит действовать: роли, формы взаимодействия, конфликты, цели, механизмы мотивации, параметры деятельности.'],
+   ['Эвристика аналогий','Учебный контекст соотносится с внешней системой — рестораном, космической станцией, театром, медиафабрикой, шпионской миссией, экономическим форумом. Аналогия задаёт «большую идею» курса, структурирующую модули, задания, обратную связь и визуальные решения.'],
+   ['Пример: программа «Маркетинг»','Базовый фрейм: каналы продвижения, анализ аудитории, сегментация. Идея-фрейм: симуляция маркетингового отдела корпорации «Galactic Brand Bureau». Роль студента — бренд-менеджер, выводящий товары на инопланетные рынки; каждая планета — сегмент аудитории; драма — дедлайн директора и потеря финансирования при провале; польза — лучшие команды представляют работы экспертам индустрии.'],
+   ['Сценарный компонент и связь с картой пути','Прописываются типовые активности и игровые элементы каждого этапа: «переговоры с трудным студентом», «цифровой учебный артефакт», «миссия для нового рекрута экспедиции», «анализ кейса через линзу персонажа». Нарративные фазы соотносятся с этапами прохождения программы, чтобы избежать «игры ради игры».']]},
+ {id:'l-id', stage:4, title:'Модели педагогического дизайна: ADDIE, SAM, ASSURE, 4C/ID', lead:'Алгоритмические каркасы проектирования программ — прикладной инструментарий стратега-картографа при создании прототипов образовательных инноваций.',
+  sections:[
+   ['ADDIE','Analysis — Design — Development — Implementation — Evaluation. Системность и последовательность проектного цикла; подходит для предсказуемых и формализованных курсов.'],
+   ['SAM','Successive Approximation Model — итеративность и гибкость: частая обратная связь и прототипирование. Выбирается, когда условия меняются быстрее, чем длится проектный цикл.'],
+   ['ASSURE','Акцент на интеграции медиатехнологий и учёте индивидуальных характеристик обучающихся на каждом шаге проектирования.'],
+   ['4C/ID — проектирование комплексного обучения','Четыре компонента и шаги: учебные задачи (проектирование задач, методов оценки деятельности, их последовательности); поддерживающая информация (её проектирование, анализ когнитивных стратегий и ментальных моделей); процедурная информация (проектирование операционной информации, анализ когнитивных правил и пререквизитов); частичная практика (отработка повторяющихся операций).'],
+   ['Выбор модели','Учитываются временные и ресурсные ограничения: итерации SAM требуют частой обратной связи; ADDIE удобна для формализованных курсов. После проектирования — саморефлексия: что удалось, какие трудности при адаптации к предмету, что доработать, какой каркас выбрать для следующего курса.']]},
+ {id:'l-ai', stage:2, title:'Генеративный ИИ в проектировочных задачах преподавателя', lead:'Сквозной модуль: языковые модели осваиваются как аналитический ресурс через прикладные задачи собственного курса — от диагностики делегируемых задач до сравнения ответа модели с собственной экспертизой.',
+  sections:[
+   ['Структура промпта','Контекст → Задание → Формат ответа → Требования. Контекст задаёт роль и исходные данные; задание — конкретную операцию; формат — вид результата (таблица, список, разделы); требования — ограничения: не домысливать, ссылаться на предоставленные данные, объём.'],
+   ['Задание 1. Диагностика делегируемых задач','Из типовых задач проектирования (формулировка целей, составление заданий, адаптация содержания, генерация кейсов, оценочные инструменты) выбрать 3–4 актуальных и определить, какие можно делегировать модели и что это даёт: время, вариативность, адаптивность, индивидуализация.'],
+   ['Задания 2–5. Промпт, стилизация, кейсы, оценка','Сконструировать промпт от дидактической задачи; стилизовать фрагмент курса под три аудитории; сгенерировать кейс и три задания разного уровня; разработать инструмент оценки и проверить его на согласованность с целью обучения.'],
+   ['Задание 6. Обратная связь','Предложить модели оценить фрагмент студенческого ответа и сравнить с собственным экспертным суждением: где совпало, где нет, что можно использовать как черновик обратной связи.'],
+   ['Итог: мини-портфолио цифровых решений','Перечень делегируемых задач; три наиболее удачных промпта с результатами; пример задания, сгенерированного моделью и доработанного преподавателем; вывод о потенциале и ограничениях нейросетей в своём курсе. Оформляется в Google-документе, презентации или странице YoNote.']]}
+];
+</script>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="name">Форсайт-навигатор</div>
+      <div class="sub">Форсайт-технология профессионального развития преподавателей вузов с использованием цифровых ресурсов</div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Разделы"></nav>
+    <div class="foot">Соколова А.С. · Самарский университет<br>Науч. рук. — д.п.н., проф. Левченко В.В.</div>
+  </aside>
+  <main class="main"><div class="wrap" id="main"></div></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const zoneOf = id => ZONES.find(z => z.id === id);
+const stageOf = n => STAGES.find(s => s.n === n);
+let toastT; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+function store(key, val){ try{ if(val===undefined) return JSON.parse(localStorage.getItem(key)||'null'); localStorage.setItem(key, JSON.stringify(val)); }catch(e){ return null; } }
+function copyText(text, btn){
+  const done = () => { toast('Скопировано'); if(btn){ const o=btn.textContent; btn.textContent='Скопировано'; setTimeout(()=>btn.textContent=o,1500);} };
+  const fallback = () => { const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){ toast('Выделите текст и скопируйте вручную'); } document.body.removeChild(ta); };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch(e){ fallback(); }
+}
+const stripTags = s => s.replace(/<\/?b>/g,'');
+
+/* ---------- state ---------- */
+const VIEWS = [
+  ['home','Главная','M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'],
+  ['concept','Концепция','M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5'],
+  ['cycle','Форсайт-цикл','M12 4a8 8 0 1 1-7.5 5M4 4v5h5'],
+  ['diagnostics','Самодиагностика','M4 18l5-6 4 3 7-9M4 20h16'],
+  ['resources','Цифровые ресурсы','M4 6h16M4 12h16M4 18h10'],
+  ['prompts','Библиотека промптов','M5 5h14v10H9l-4 4z'],
+  ['templates','Карты и шаблоны','M4 4h16v16H4zM4 10h16M10 10v10'],
+  ['lectures','Лекции','M4 19V5a1 1 0 0 1 1-1h13v14H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h12v-4'],
+  ['results','Результаты апробации','M5 20V10M12 20V4M19 20v-7'],
+  ['organizers','Для организаторов','M12 3l8 4v6c0 4-3 7-8 8-5-1-8-4-8-8V7z']
+];
+const state = { view:'home', stage:1, rg:1, pf:'all', tpl:'t1', lf:'all' };
+
+function nav(){
+  $('#nav').innerHTML = VIEWS.map(([id,label,path],i)=>
+    (id==='results'?'<div class="sep"></div>':'')+
+    `<a href="#${id}" ${state.view===id?'aria-current="page"':''}><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>${label}</a>`).join('');
+}
+function route(){
+  const h = (location.hash||'#home').slice(1);
+  state.view = VIEWS.some(v=>v[0]===h) ? h : 'home';
+  nav(); render();
+  try{ $('.main').scrollTop = 0; window.scrollTo(0,0); }catch(e){}
+}
+window.addEventListener('hashchange', route);
+
+function render(){
+  const m = $('#main');
+  const fn = { home:vHome, concept:vConcept, cycle:vCycle, diagnostics:vDiag, resources:vRes, prompts:vPrompts, templates:vTpl, lectures:vLect, results:vResults, organizers:vOrg }[state.view];
+  m.innerHTML = fn();
+  (POST[state.view]||(()=>{}))(m);
+}
+const POST = {};
+
+/* ---------- progress ---------- */
+function progress(){ return store('fn_progress') || {}; }
+function stageItems(s){ return [...s.steps.map(x=>x[0]), 'Создан проектный продукт: '+s.product, 'Проведена рефлексивная пауза по итогам этапа']; }
+function stageDone(s){ const p=progress()[s.n]||[]; return p.filter(Boolean).length; }
+function totalDone(){ return STAGES.reduce((a,s)=>a+stageDone(s),0); }
+function totalItems(){ return STAGES.reduce((a,s)=>a+stageItems(s).length,0); }
+
+/* ---------- spiral ---------- */
+function spiralSVG(size=520, compact=false){
+  const cx=size/2, cy=size/2, th0=0.55*Math.PI, turns=2.35;
+  const r = th => 30 + 26*(th-th0);
+  const pt = th => [cx + r(th)*Math.cos(th), cy + r(th)*Math.sin(th)];
+  const path = (a,b,step=0.05) => { let d=''; for(let t=a;t<=b+1e-9;t+=step){ const [x,y]=pt(Math.min(t,b)); d+=(d?'L':'M')+x.toFixed(1)+' '+y.toFixed(1); } return d; };
+  const thMax = th0 + turns*Math.PI;
+  const nodes = STAGES.map((s,i)=>({s, th: th0 + 0.42*Math.PI + i*0.37*Math.PI}));
+  let out = `<svg class="sp" viewBox="0 0 ${size} ${size}" role="img" aria-label="Спиральная ситуационно-позиционная модель: шесть этапов форсайт-цикла">`;
+  out += `<path d="${path(th0, thMax)}" fill="none" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/>`;
+  // zone segments
+  [[0,1,'z1'],[2,3,'z2'],[4,5,'z3']].forEach(([a,b,z])=>{ out += `<path d="${path(nodes[a].th-0.12, nodes[b].th+0.12)}" fill="none" stroke="var(--${z})" stroke-width="5" stroke-linecap="round" opacity=".9"/>`; });
+  // arrow at the end (new turn)
+  const [ex,ey]=pt(thMax); const [px,py]=pt(thMax-0.08); const ang=Math.atan2(ey-py,ex-px);
+  const ah = (a,l)=>[ex - l*Math.cos(ang+a), ey - l*Math.sin(ang+a)];
+  const [a1x,a1y]=ah(0.5,14), [a2x,a2y]=ah(-0.5,14);
+  out += `<path d="M${a1x.toFixed(1)} ${a1y.toFixed(1)}L${ex.toFixed(1)} ${ey.toFixed(1)}L${a2x.toFixed(1)} ${a2y.toFixed(1)}" fill="none" stroke="var(--muted)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(!compact) out += `<text x="${(ex-10).toFixed(1)}" y="${(ey+26).toFixed(1)}" class="pos" text-anchor="end">новый виток спирали →</text>`;
+  // center
+  out += `<circle cx="${cx}" cy="${cy}" r="${compact?34:46}" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>`;
+  out += `<text x="${cx}" y="${cy-(compact?4:8)}" text-anchor="middle" class="center-t">Проспективная</text><text x="${cx}" y="${cy+(compact?8:6)}" text-anchor="middle" class="center-t">субъектность</text>`;
+  if(!compact) out += `<text x="${cx}" y="${cy+22}" text-anchor="middle" class="center-s">целевой ориентир</text>`;
+  // nodes
+  nodes.forEach(({s,th})=>{
+    const [x,y]=pt(th); const z=s.zone; const R=compact?16:19;
+    const ox=Math.cos(th), oy=Math.sin(th);
+    const lx = x + ox*(R+10), ly = y + oy*(R+10);
+    const anchor = ox > 0.3 ? 'start' : (ox < -0.3 ? 'end' : 'middle');
+    const dy = oy > 0.5 ? 14 : (oy < -0.5 ? -4 : 4);
+    out += `<g class="node" data-stage="${s.n}" tabindex="0" role="button" aria-label="${s.roman} этап — ${s.name}, позиция: ${s.position}">`;
+    out += `<circle class="main" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${R}" fill="var(--${z})" stroke="var(--bg)" stroke-width="3"/>`;
+    out += `<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle" font-size="${compact?10:11}" font-weight="700" fill="#fff" font-family="var(--mono)">${s.roman}</text>`;
+    if(!compact){
+      out += `<text x="${lx.toFixed(1)}" y="${(ly+dy).toFixed(1)}" text-anchor="${anchor}" class="lbl">${s.name}</text>`;
+      out += `<text x="${lx.toFixed(1)}" y="${(ly+dy+13).toFixed(1)}" text-anchor="${anchor}" class="pos">${s.position.toLowerCase()}</text>`;
+    }
+    out += `</g>`;
+  });
+  out += `</svg>`;
+  return out;
+}
+function bindSpiral(root){
+  root.querySelectorAll('svg.sp .node').forEach(n=>{
+    const go=()=>{ state.stage=+n.dataset.stage; if(state.view!=='cycle'){ location.hash='#cycle'; } else render(); };
+    n.addEventListener('click',go); n.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  });
+}
+
+/* ---------- views ---------- */
+function vHome(){
+  const done=totalDone(), total=totalItems(), pct=Math.round(done/total*100);
+  return `
+  <section class="hero">
+    <div class="copy">
+      <div class="eyebrow">Педагогическая технология нового типа</div>
+      <h1>Шесть этапов, шесть позиций, один цикл работы с профессиональным будущим</h1>
+      <p class="lead">Форсайт-технология переводит императив опережающего образования из деклараций в последовательность процедур: преподаватель вуза сам сканирует тренды, строит сценарии, картирует собственную траекторию, проходит экспертизу коллег и интегрирует результат в систему профессиональных ценностей. Каждый шаг обеспечен цифровыми ресурсами и прикладной задачей из собственной практики.</p>
+      <div class="kpis">
+        <div class="kpi"><b class="num">3</b><span>зоны модели</span></div>
+        <div class="kpi"><b class="num">6</b><span>этапов цикла</span></div>
+        <div class="kpi"><b class="num">6</b><span>профессиональных позиций</span></div>
+        <div class="kpi"><b class="num">6</b><span>групп цифровых ресурсов</span></div>
+      </div>
+      <div class="row"><a class="btn primary" href="#cycle">Начать цикл</a><a class="btn" href="#diagnostics">Определить свою установку</a></div>
+    </div>
+    <div class="spiral">${spiralSVG(520)}
+      <div class="zone-legend">${ZONES.map(z=>`<span><i style="background:var(--${z.id})"></i>${z.short}</span>`).join('')}</div>
+    </div>
+  </section>
+
+  <section class="grid g3">
+    <div class="card stack">
+      <div class="eyebrow">Что это</div>
+      <h3>Технология, а не курс</h3>
+      <p class="small">Содержательно и процессуально определённая система форсайт-процедур, андрагогических форматов и цифровых ресурсов. Четыре сущностных признака: педагогическая технологичность, проспективная направленность, андрагогическая укоренённость, цифровая опосредованность.</p>
+      <a href="#concept" class="small">Концепция →</a>
+    </div>
+    <div class="card stack">
+      <div class="eyebrow">Для кого</div>
+      <h3>Преподаватель любого вуза</h3>
+      <p class="small">Цикл проходится индивидуально или в группе 12–20 человек междисциплинарного состава. Весь процесс — от входной диагностики до итоговой рефлексии — реализуем в цифровой среде, независимо от географии участников.</p>
+      <a href="#organizers" class="small">Для организаторов →</a>
+    </div>
+    <div class="card stack">
+      <div class="eyebrow">Что получится</div>
+      <h3>Двойной результат</h3>
+      <p class="small">Дорожная карта собственного развития на 3–5 лет и комплект прикладных продуктов для своих курсов: карта трендов, сценарная матрица, карта пути студента, прототип модуля, набор промптов, геймификационная схема.</p>
+      <a href="#templates" class="small">Карты и шаблоны →</a>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <div class="row between"><div><div class="eyebrow">Ваш виток спирали</div><h3>Прогресс по цифровому циклу</h3></div><span class="pill num">${done} / ${total}</span></div>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="grid g3">
+      ${STAGES.map(s=>`<a href="#cycle" class="small" data-go="${s.n}" style="text-decoration:none;color:inherit;display:flex;gap:8px;align-items:center"><span class="pill ${s.zone}">${s.roman}</span><span>${s.name}</span><span class="muted num" style="margin-left:auto">${stageDone(s)}/${stageItems(s).length}</span></a>`).join('')}
+    </div>
+    <p class="small muted">Отметки хранятся только в этом браузере и не передаются никуда. Цикл можно проходить повторно: завершение VI этапа — запрос на новый виток.</p>
+  </section>
+
+  <section class="footer-note">Приложение воспроизводит содержательно-процессуальную модель диссертационного исследования А.С. Соколовой «Форсайт-технология профессионального развития преподавателей вузов с использованием цифровых ресурсов» (специальность 5.8.7, педагогические науки). Опытно-экспериментальная база — Самарский национальный исследовательский университет имени академика С.П. Королёва; 110 преподавателей (контрольная и экспериментальная группы по 55 человек). Научный руководитель — д.п.н., проф. В.В. Левченко.</section>`;
+}
+POST.home = root => { bindSpiral(root); root.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click',()=>{ state.stage=+a.dataset.go; })); };
+
+function vConcept(){
+  return `
+  <div class="view-head"><div class="eyebrow">Концепция</div><h1>Двойное опережение и проспективная субъектность</h1>
+  <p class="lead">Преподаватель вуза одновременно занимает две позиции: он взрослый субъект собственного развития и педагог, проектирующий обучение для студентов в условиях упреждаемых изменений. Одномерного опережения здесь недостаточно.</p></div>
+
+  <section class="grid g2">
+    <div class="card stack"><div class="eyebrow">Линия 1</div><h3>Опережение содержания</h3><p>Предметом развития становится не наличное состояние высшего образования, а упреждаемые тренды и слабые сигналы его трансформации, выявляемые методами форсайта. Преподаватель работает с альтернативными образами будущего и сценариями его развёртывания.</p></div>
+    <div class="card stack"><div class="eyebrow">Линия 2</div><h3>Опережение профессиональной позиции</h3><p>Предметом становится сам преподаватель как автор собственной перспективы: он не получает образ будущего извне, а порождает его, последовательно осваивая позиции аналитика, исследователя, сценариста, стратега, эксперта и рефлексивного практика.</p></div>
+  </section>
+  <div class="card"><p>Согласованность двух линий обеспечивает единый форсайт-цикл: каждый этап продвигает содержание (расширяет горизонт упреждаемого) и позицию (переводит преподавателя в очередную модальность работы с будущим). Двойное опережение выступает принципом проектирования технологии, критерием её отграничения от стратегического прогнозирования и отдельных форсайт-сессий, и онтологическим основанием проспективной профессиональной субъектности.</p></div>
+
+  <section class="stack">
+    <div class="eyebrow">Целевой результат</div>
+    <h2>Проспективная профессиональная субъектность</h2>
+    <p class="lead">Интегративное качество: осознанная направленность на профессиональное будущее, способность к самоопределению в горизонте упреждаемых изменений и готовность к деятельному, рефлексивно опосредованному проектированию собственной перспективы средствами форсайт-инструментария и цифровых ресурсов.</p>
+    <div class="grid g3">
+      <div class="card stack"><div class="pill">S<sub>мц</sub></div><h3>Мотивационно-ценностный</h3><p class="small">Характер установок по отношению к будущему, ценностные ориентации, внутренняя мотивация участия в форсайт-деятельности.</p></div>
+      <div class="card stack"><div class="pill">S<sub>кп</sub></div><h3>Когнитивно-прогностический</h3><p class="small">Понятийный аппарат форсайта, сценарное мышление, горизонтальное сканирование, дорожное картирование.</p></div>
+      <div class="card stack"><div class="pill">S<sub>од</sub></div><h3>Операционально-деятельностный</h3><p class="small">Самостоятельное проектирование профессионального пути в логике цикла, владение методами и шестью группами цифровых ресурсов.</p></div>
+    </div>
+    <div class="card"><b>Сквозное рефлексивное основание.</b> Трансформативная рефлексия не выделена в четвёртый компонент: она имманентное условие каждого из трёх, что обеспечивает структурный изоморфизм диагностики и модели. Интегральный показатель: <span class="mono">S<sub>инт</sub> = (S<sub>мц</sub> + S<sub>кп</sub> + S<sub>од</sub>) / 3</span>; уровни — критический, допустимый, оптимальный.</div>
+  </section>
+
+  <section class="stack">
+    <div class="eyebrow">Четыре сущностных признака</div>
+    <div class="grid g4">
+      ${[['Педагогическая технологичность','полнота технологического цикла с определёнными компонентами: целевым, содержательным, процессуальным, инструментально-цифровым, критериально-оценочным'],['Проспективная направленность','ориентация на прогнозируемое будущее и формирование метакомпетенции стратегического профессионального предвидения'],['Андрагогическая укоренённость','учёт специфики взрослого субъекта: опора на опыт, самодетерминация, проблемная ориентация'],['Цифровая опосредованность','цифровые ресурсы как имманентное, а не факультативное условие реализации']].map(([t,d])=>`<div class="card stack"><h4>${t}</h4><p class="small muted">${d}</p></div>`).join('')}
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="eyebrow">Методологическая триада — иерархия обязательна</div>
+    <div class="grid g3">
+      <div class="card stack"><span class="pill">1</span><h3>Деятельностный подход</h3><p class="small">Задаёт архитектуру форсайт-деятельности: Л.С. Выготский, В.В. Давыдов, А.Н. Леонтьев, С.Л. Рубинштейн, Г.П. Щедровицкий.</p></div>
+      <div class="card stack"><span class="pill">2</span><h3>Андрагогический подход</h3><p class="small">Определяет требования к организации: М.Ш. Ноулз, С.И. Змеёв, М.Т. Громкова, Дж. Мезироу.</p></div>
+      <div class="card stack"><span class="pill">3</span><h3>Антропологический подход</h3><p class="small">Обосновывает ценностно-смысловой горизонт: В.И. Слободчиков, Б.М. Бим-Бад, Е.И. Исаев; форсайт как антропопрактика.</p></div>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="eyebrow">Семь проектных требований — методологическое техническое задание</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Требование</th><th>Содержание</th><th>Где реализуется</th></tr></thead><tbody>
+      ${REQUIREMENTS.map(([t,d,w])=>`<tr><td><b>${t}</b></td><td>${d}</td><td>${w}</td></tr>`).join('')}
+    </tbody></table></div>
+  </section>
+
+  <section class="stack">
+    <div class="eyebrow">Три зоны модели</div>
+    <div class="grid g3">${ZONES.map(z=>`<div class="card stack"><span class="pill ${z.id}"><span class="dot"></span>этапы ${z.stages.map(n=>stageOf(n).roman).join('–')}</span><h3>${z.name}</h3><p class="small">${z.text}</p></div>`).join('')}</div>
+    <div class="card"><b>Почему спираль.</b> Ситуационная — развитие идёт через организованные образовательные ситуации (Г.А. Игнатьева), а не через информирование. Позиционная — в каждой ситуации преподаватель занимает профессиональную позицию, и развитие есть их смена. Спиральная — каждый полный цикл завершается выходом на качественно новый уровень субъектности, а результаты предыдущего витка становятся отправной точкой следующего.</div>
+  </section>`;
+}
+
+function vCycle(){
+  const s = stageOf(state.stage); const z = zoneOf(s.zone);
+  const items = stageItems(s); const p = (progress()[s.n]||[]);
+  const prev = stageOf(s.n-1), next = stageOf(s.n+1);
+  const rg = RGROUPS.find(g=>g.n===s.rgroup);
+  return `
+  <div class="view-head"><div class="eyebrow">Форсайт-цикл</div><h1>Содержательно-процессуальная модель</h1>
+  <p class="lead">Выберите этап. У каждого — своя профессиональная позиция, проектное требование, группа цифровых ресурсов, цепочка цифровых действий и продукт.</p></div>
+
+  <div class="tabs">${STAGES.map(x=>`<button class="chip ${x.zone}" data-st="${x.n}" aria-pressed="${x.n===s.n}">${x.roman}. ${x.name}</button>`).join('')}</div>
+
+  <section class="card">
+    <div class="stage-head">
+      <div class="stack">
+        <div class="row"><span class="pill ${s.zone}"><span class="dot"></span>${z.short} зона</span><span class="pill">этап ${s.roman} из VI</span></div>
+        <h2>${s.roman}. ${s.name}</h2>
+        <p class="lead">${s.aim}</p>
+        <div class="row"><span class="eyebrow">Позиция преподавателя</span><b>${s.position}</b></div>
+      </div>
+      <div style="width:170px;max-width:100%">${spiralSVG(170,true)}</div>
+    </div>
+  </section>
+
+  <section class="grid g2">
+    <div class="card stack">
+      <div class="eyebrow">Что делает преподаватель</div>
+      <ul>${s.content.map(c=>`<li>${c}</li>`).join('')}</ul>
+    </div>
+    <div class="card">
+      <dl class="defl">
+        <dt>Проектное требование</dt><dd>${s.requirement}</dd>
+        <dt>Методологическая опора</dt><dd>${s.basis}</dd>
+        <dt>Группа ресурсов</dt><dd><a href="#resources" data-rg="${s.rgroup}">${s.resources}</a> — ${rg.fn.toLowerCase()}</dd>
+        <dt>Сопровождение</dt><dd>${s.modules.join('<br>')}</dd>
+        <dt>Проектный продукт</dt><dd>${s.product}</dd>
+        <dt>Оценка</dt><dd>${s.assessment}</dd>
+        <dt>Прикладная задача</dt><dd>${s.applied}</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="grid g2">
+    <div class="card stack">
+      <div class="row between"><div><div class="eyebrow">Цифровой процесс</div><h3>Цепочка действий этапа</h3></div></div>
+      <div class="stage-steps">${s.steps.map((st,i)=>`<div class="step"><div class="n">${i+1}</div><div><div class="t">${st[0]}</div><div class="tools">${st[1]}</div></div></div>`).join('')}</div>
+    </div>
+    <div class="card stack">
+      <div class="row between"><div><div class="eyebrow">Чек-лист прохождения</div><h3>Отметьте выполненное</h3></div><span class="pill num" id="st-count">${p.filter(Boolean).length} / ${items.length}</span></div>
+      <div class="progress"><i id="st-bar" style="width:${Math.round(p.filter(Boolean).length/items.length*100)}%"></i></div>
+      <div>${items.map((it,i)=>`<label class="check ${p[i]?'done':''}"><input type="checkbox" id="chk-${s.n}-${i}" data-i="${i}" ${p[i]?'checked':''}><span>${it}</span></label>`).join('')}</div>
+      <div class="row"><a class="btn sm" href="#templates" data-tpl="${s.tpl}">Открыть шаблон продукта</a><a class="btn sm" href="#prompts" data-pf="${s.n}">Промпты этапа</a>${LECTURES.some(l=>l.stage===s.n)?`<a class="btn sm" href="#lectures" data-lf="${s.n}">Лекции этапа</a>`:''}</div>
+    </div>
+  </section>
+
+  <div class="stage-nav">
+    ${prev?`<button class="btn" data-st="${prev.n}">← ${prev.roman}. ${prev.name}</button>`:'<span></span>'}
+    ${next?`<button class="btn primary" data-st="${next.n}">${next.roman}. ${next.name} →</button>`:`<a class="btn primary" href="#home">Завершить виток и вернуться на главную</a>`}
+  </div>`;
+}
+POST.cycle = root => {
+  bindSpiral(root);
+  root.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',()=>{ state.stage=+b.dataset.st; render(); try{ window.scrollTo({top:0}); }catch(e){} }));
+  root.querySelectorAll('[data-tpl]').forEach(a=>a.addEventListener('click',()=>state.tpl=a.dataset.tpl));
+  root.querySelectorAll('[data-pf]').forEach(a=>a.addEventListener('click',()=>state.pf=a.dataset.pf));
+  root.querySelectorAll('[data-lf]').forEach(a=>a.addEventListener('click',()=>state.lf=a.dataset.lf));
+  root.querySelectorAll('[data-rg]').forEach(a=>a.addEventListener('click',()=>state.rg=+a.dataset.rg));
+  const s = stageOf(state.stage), items = stageItems(s);
+  root.querySelectorAll('.check input').forEach(ch=>ch.addEventListener('change',()=>{
+    const all=progress(); const arr=all[s.n]||Array(items.length).fill(false); arr[+ch.dataset.i]=ch.checked; all[s.n]=arr; store('fn_progress',all);
+    ch.closest('.check').classList.toggle('done',ch.checked);
+    const d=arr.filter(Boolean).length; $('#st-count').textContent=`${d} / ${items.length}`; $('#st-bar').style.width=Math.round(d/items.length*100)+'%';
+  }));
+};
+
+function vDiag(){
+  const levelsTbl = (k,title) => `<div class="card stack"><h4>${title}</h4><div class="scale"><div class="lvl-crit"><b>Критический</b><br>${LEVELS[k][0]}</div><div class="lvl-adm"><b>Допустимый</b><br>${LEVELS[k][1]}</div><div class="lvl-opt"><b>Оптимальный</b><br>${LEVELS[k][2]}</div></div></div>`;
+  return `
+  <div class="view-head"><div class="eyebrow">Самодиагностика · I этап</div><h1>Какая у меня установка по отношению к будущему?</h1>
+  <p class="lead">Экспресс-проверка для входа в цикл. Полный диагностический комплекс программы включает анкеты с трёхуровневой шкалой, опросник профессиональной мотивации, экспертные рубрики проектных продуктов и рефлексивные карты; здесь — ориентировочная самооценка, результат которой не передаётся никуда.</p></div>
+
+  <section class="card">
+    <form id="diag">
+      ${DIAG_Q.map((q,i)=>`<div class="q"><b>${i+1}. ${q.q}</b><div class="opts">${q.o.map((o,j)=>`<label class="opt"><input type="radio" name="q${i}" id="q${i}-${j}" value="${j}"><span>${o}</span></label>`).join('')}</div></div>`).join('')}
+      <div class="row" style="margin-top:14px"><button class="btn primary" type="submit">Показать результат</button><button class="btn" type="button" id="diag-reset">Сбросить</button></div>
+    </form>
+    <div id="diag-res" class="stack" style="margin-top:16px" hidden></div>
+  </section>
+
+  <div class="view-head"><div class="eyebrow">Калькулятор уровня</div><h2>Интегральный показатель S<sub>инт</sub></h2>
+  <p>Экспертное оценивание по десятибалльной шкале: 8–10 баллов — оптимальный уровень, 5–7 — допустимый, 4 и менее — критический. <span class="mono">S<sub>инт</sub> = (S<sub>мц</sub> + S<sub>кп</sub> + S<sub>од</sub>) / 3</span>. Оцените себя по каждому компоненту или внесите оценки эксперта.</p></div>
+  <section class="card stack">
+    <div class="grid g3">
+      ${[['mc','S<sub>мц</sub> — мотивационно-ценностный'],['kp','S<sub>кп</sub> — когнитивно-прогностический'],['od','S<sub>од</sub> — операционально-деятельностный']].map(([k,l])=>`<label class="f">${l} <span class="num" id="v-${k}">6</span><input type="range" min="1" max="10" value="6" id="r-${k}"></label>`).join('')}
+    </div>
+    <div class="result" id="s-res"></div>
+  </section>
+  <section class="stack">
+    <div class="eyebrow">Критерии уровней по компонентам</div>
+    ${levelsTbl('mc','Мотивационно-ценностный компонент')}${levelsTbl('kp','Когнитивно-прогностический компонент')}${levelsTbl('od','Операционально-деятельностный компонент')}
+  </section>`;
+}
+POST.diagnostics = root => {
+  const f=$('#diag',root), res=$('#diag-res',root);
+  f.addEventListener('submit',e=>{
+    e.preventDefault();
+    const cnt=[0,0,0]; let answered=0;
+    DIAG_Q.forEach((q,i)=>{ const v=f.querySelector(`input[name=q${i}]:checked`); if(v){ cnt[+v.value]++; answered++; } });
+    if(answered<DIAG_Q.length){ res.hidden=false; res.innerHTML=`<div class="result">Ответьте на все ${DIAG_Q.length} утверждений — пропущено ${DIAG_Q.length-answered}.</div>`; return; }
+    const names=['ретроспективная','адаптивная','проспективная'];
+    const desc=['Ориентация на воспроизводство сложившихся практик. В технологии это исходная точка, а не приговор: I этап построен так, чтобы показать связь форсайт-деятельности с вашими конкретными задачами, а прикладная задача («научиться применять нейросети в курсе», «спроектировать геймификацию») становится входом в цикл.','Готовность приспосабливаться к изменениям по мере их наступления — переходный тип с элементами проспективной ориентации. Критическая точка роста — II и III этапы: переход от отслеживания трендов к пониманию порождающих их противоречий и к конструированию альтернатив.','Способность предвосхищать изменения и конструировать профессиональное будущее. Технология нужна здесь для технологической полноты цикла: оформить интуицию в сценарную матрицу и дорожную карту, пройти экспертизу коллег и зафиксировать, какие допущения вы пересмотрели.'];
+    const max=Math.max(...cnt); const dom=cnt.indexOf(max); const tie=cnt.filter(c=>c===max).length>1;
+    res.hidden=false;
+    res.innerHTML=`<div class="result"><div class="eyebrow">Доминирующая установка</div><h3 style="margin:4px 0 8px">${tie?'Смешанный профиль':names[dom].charAt(0).toUpperCase()+names[dom].slice(1)}</h3><p class="small">Ретроспективная: ${cnt[0]} · адаптивная: ${cnt[1]} · проспективная: ${cnt[2]} из ${DIAG_Q.length}</p></div><p>${tie?'Ответы распределились между установками почти поровну: это типичная переходная картина. Начните с I этапа — формулировка проблемы развития в горизонте 5–15 лет покажет, какая линия ведущая.':desc[dom]}</p><div class="row"><a class="btn primary" href="#cycle">Перейти к I этапу</a><a class="btn" href="#templates">Персональная ресурсная карта</a></div>`;
+    try{ res.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+  });
+  $('#diag-reset',root).addEventListener('click',()=>{ f.reset(); res.hidden=true; });
+  const calc=()=>{
+    const v={}; ['mc','kp','od'].forEach(k=>{ v[k]=+$('#r-'+k,root).value; $('#v-'+k,root).textContent=v[k]; });
+    const s=(v.mc+v.kp+v.od)/3; const lvl = s>=8?2:(s>=5?1:0); const ln=['критический','допустимый','оптимальный'];
+    const comp=k=>{ const x=v[k]; const l=x>=8?2:(x>=5?1:0); return ln[l]; };
+    $('#s-res',root).innerHTML=`<div class="eyebrow">S<sub>инт</sub> = (${v.mc} + ${v.kp} + ${v.od}) / 3</div><h3 style="margin:4px 0 6px" class="num">${s.toFixed(2)} — ${ln[lvl]} уровень</h3><p class="small">По компонентам: мотивационно-ценностный — ${comp('mc')}; когнитивно-прогностический — ${comp('kp')}; операционально-деятельностный — ${comp('od')}.</p>`;
+  };
+  ['mc','kp','od'].forEach(k=>$('#r-'+k,root).addEventListener('input',calc)); calc();
+};
+
+function vRes(){
+  const g = RGROUPS.find(x=>x.n===state.rg); const s=stageOf(g.stage);
+  return `
+  <div class="view-head"><div class="eyebrow">Типология</div><h1>Шесть групп цифровых ресурсов</h1>
+  <p class="lead">Каждая группа соотнесена с этапом цикла и проектным требованием. Ресурсы — имманентный компонент технологии: без них цикл не воспроизводится. Ресурс, освоенный на собственной задаче, остаётся в практике; ресурс, показанный на лекции, забывается.</p></div>
+  <div class="tabs">${RGROUPS.map(x=>`<button class="chip ${stageOf(x.stage).zone}" data-rg="${x.n}" aria-pressed="${x.n===g.n}">${x.n}. ${x.name}</button>`).join('')}</div>
+  <section class="card stack">
+    <div class="row"><span class="pill ${s.zone}">этап ${s.roman} — ${s.name}</span><span class="pill">${s.position}</span></div>
+    <h2>${g.name} ресурсы</h2>
+    <dl class="defl"><dt>Функция</dt><dd>${g.fn}</dd><dt>Проектное требование</dt><dd>${g.requirement}</dd></dl>
+  </section>
+  <div class="tbl-wrap"><table><thead><tr><th>Тип ресурса</th><th>Назначение на этапе</th><th>Примеры платформ</th></tr></thead><tbody>
+    ${g.items.map(([a,b,c])=>`<tr><td><b>${a}</b></td><td>${b}</td><td>${c}</td></tr>`).join('')}
+  </tbody></table></div>
+  <section class="stack"><div class="eyebrow">Трёхуровневая цифровая инфраструктура</div>
+    <div class="grid g3">${INFRA.map(([t,d])=>`<div class="card stack"><h4>${t}</h4><p class="small muted">${d}</p></div>`).join('')}</div>
+    <p class="small muted">Платформы приведены как примеры из опыта апробации; технология не привязана к конкретному вендору — важна функция ресурса на этапе.</p>
+  </section>`;
+}
+POST.resources = root => root.querySelectorAll('[data-rg]').forEach(b=>b.addEventListener('click',()=>{ state.rg=+b.dataset.rg; render(); }));
+
+function vPrompts(){
+  const f = state.pf; const list = PROMPTS.filter(p=> f==='all' || String(p.stage)===String(f));
+  return `
+  <div class="view-head"><div class="eyebrow">Аналитические ресурсы</div><h1>Библиотека промптов</h1>
+  <p class="lead">Запросы к генеративным языковым моделям (YandexGPT, GigaChat, ChatGPT) по структуре «Контекст → Задание → Формат ответа → Требования». Замените квадратные скобки своими данными. Модель — черновик и когнитивный посредник; экспертное суждение остаётся за преподавателем.</p></div>
+  <div class="tabs"><button class="chip" data-pf="all" aria-pressed="${f==='all'}">Все</button>${STAGES.map(s=>`<button class="chip ${s.zone}" data-pf="${s.n}" aria-pressed="${String(f)===String(s.n)}">${s.roman}. ${s.name}</button>`).join('')}<button class="chip" data-pf="0" aria-pressed="${String(f)==='0'}">Прикладные задачи курса</button></div>
+  <div class="grid g2">
+    ${list.map(p=>{ const s=stageOf(p.stage); return `<div class="card prompt"><div class="row between"><span class="pill ${s?s.zone:''}">${s?s.roman+'. '+s.name:'сквозной модуль по ИИ'}</span><button class="btn sm" data-copy="${p.id}">Копировать</button></div><h3>${p.title}</h3><pre id="pr-${p.id}">${p.text}</pre></div>`; }).join('')}
+  </div>`;
+}
+POST.prompts = root => {
+  root.querySelectorAll('[data-pf]').forEach(b=>b.addEventListener('click',()=>{ state.pf=b.dataset.pf; render(); }));
+  root.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{ const p=PROMPTS.find(x=>x.id===+b.dataset.copy); copyText(stripTags(p.text), b); }));
+};
+
+function vTpl(){
+  const t = TEMPLATES.find(x=>x.id===state.tpl); const s=stageOf(t.stage); const saved=store('fn_tpl_'+t.id)||{};
+  const field = ([id,label,hint,kind]) => `<label class="f">${label}${hint?`<span class="hint">${hint}</span>`:''}${kind==='in'?`<input type="text" id="tf-${t.id}-${id}" data-f="${id}" value="${esc(saved[id]||'')}">`:`<textarea id="tf-${t.id}-${id}" data-f="${id}">${esc(saved[id]||'')}</textarea>`}</label>`;
+  let body;
+  if(t.matrix){
+    const fs = Object.fromEntries(t.fields.map(f=>[f[0],f]));
+    body = `<div class="grid g2">${field(fs.axisA)}${field(fs.axisB)}</div><div class="matrix">${['q1','q2','q3','q4'].map(q=>`<div class="quad"><div class="qt">${fs[q][1]}</div><textarea id="tf-${t.id}-${q}" data-f="${q}" placeholder="${esc(fs[q][2])}">${esc(saved[q]||'')}</textarea></div>`).join('')}</div>${field(fs.delphi)}`;
+  } else body = t.fields.map(field).join('');
+  return `
+  <div class="view-head"><div class="eyebrow">Проектные продукты цикла</div><h1>Карты и шаблоны</h1>
+  <p class="lead">Шесть продуктов — по одному на этап. Поля сохраняются в этом браузере по мере ввода; готовый текст можно скопировать в рефлексивный дневник, портфолио или на совместную доску.</p></div>
+  <div class="tabs">${TEMPLATES.map(x=>`<button class="chip ${stageOf(x.stage).zone}" data-tpl="${x.id}" aria-pressed="${x.id===t.id}">${stageOf(x.stage).roman}. ${x.title}</button>`).join('')}</div>
+  <section class="card stack">
+    <div class="row between"><div><span class="pill ${s.zone}">этап ${s.roman} — ${s.position}</span></div><span class="small muted" id="tpl-status">${Object.keys(saved).length?'Сохранено в этом браузере':''}</span></div>
+    <h2>${t.title}</h2><p>${t.intro}</p>
+    <form id="tpl-form" class="stack">${body}</form>
+    <div class="row"><button class="btn primary" id="tpl-copy">Копировать как текст</button><button class="btn" id="tpl-clear">Очистить</button><a class="btn" href="#cycle" data-st="${s.n}">К этапу ${s.roman}</a></div>
+  </section>`;
+}
+POST.templates = root => {
+  root.querySelectorAll('[data-tpl]').forEach(b=>b.addEventListener('click',()=>{ state.tpl=b.dataset.tpl; render(); }));
+  root.querySelectorAll('[data-st]').forEach(a=>a.addEventListener('click',()=>state.stage=+a.dataset.st));
+  const t = TEMPLATES.find(x=>x.id===state.tpl); const key='fn_tpl_'+t.id; let tm;
+  const read=()=>{ const o={}; root.querySelectorAll('[data-f]').forEach(el=>{ if(el.value.trim()) o[el.dataset.f]=el.value; }); return o; };
+  root.querySelectorAll('[data-f]').forEach(el=>el.addEventListener('input',()=>{ clearTimeout(tm); tm=setTimeout(()=>{ store(key, read()); $('#tpl-status',root).textContent='Сохранено в этом браузере'; },400); }));
+  $('#tpl-copy',root).addEventListener('click',e=>{ e.preventDefault(); const v=read(); const s=stageOf(t.stage);
+    const txt = `${t.title.toUpperCase()}\nЭтап ${s.roman} — ${s.name}. Позиция: ${s.position}\n\n` + t.fields.map(f=>`${f[1]}\n${v[f[0]]||'—'}\n`).join('\n'); copyText(txt, e.currentTarget); });
+  $('#tpl-clear',root).addEventListener('click',e=>{ e.preventDefault(); root.querySelectorAll('[data-f]').forEach(el=>el.value=''); store(key,{}); $('#tpl-status',root).textContent='Очищено'; });
+};
+
+function vLect(){
+  const f=state.lf; const list=LECTURES.filter(l=>f==='all'||String(l.stage)===String(f));
+  return `
+  <div class="view-head"><div class="eyebrow">Прикладной слой</div><h1>Лекции и методические материалы</h1>
+  <p class="lead">Технология построена двухслойно: первый слой — форсайт-методы этапов, второй — прикладные задачи преподавательской практики, на материале которых методы присваиваются. Геймификация — потому что это проектирование по сценарию; карта пути студента — потому что это картирование; генеративный ИИ — потому что это аналитический ресурс.</p></div>
+  <div class="tabs"><button class="chip" data-lf="all" aria-pressed="${f==='all'}">Все</button>${[2,3,4].map(n=>{const s=stageOf(n);return `<button class="chip ${s.zone}" data-lf="${n}" aria-pressed="${String(f)===String(n)}">${s.roman}. ${s.name}</button>`;}).join('')}</div>
+  <div class="stack">${list.map(l=>{ const s=stageOf(l.stage); return `<details><summary><span><span class="pill ${s.zone}" style="margin-right:8px">${s.roman}. ${s.name}</span>${l.title}</span></summary><div class="body"><p class="lead" style="font-size:1rem">${l.lead}</p>${l.sections.map(([h,b])=>`<div><h4>${h}</h4><p class="small">${b}</p></div>`).join('')}</div></details>`; }).join('')}</div>`;
+}
+POST.lectures = root => root.querySelectorAll('[data-lf]').forEach(b=>b.addEventListener('click',()=>{ state.lf=b.dataset.lf; render(); }));
+
+function vResults(){
+  return `
+  <div class="view-head"><div class="eyebrow">Опытно-экспериментальная работа</div><h1>Результаты апробации</h1>
+  <p class="lead">Самарский национальный исследовательский университет имени академика С.П. Королёва. 110 преподавателей: контрольная группа — 55, экспериментальная — 55. Программа повышения квалификации в формате смешанного обучения; апробация инструментария также с участием преподавателей НИУ ВШЭ, Университета ИТМО, УрФУ и ЮФУ.</p></div>
+  <section class="grid g4">
+    <div class="card"><div class="eyebrow">Исходная эквивалентность</div><b class="num" style="font-family:var(--display);font-size:1.3rem">p &gt; 0,05</b><p class="small muted">U-критерий Манна–Уитни: различия между группами на констатирующем этапе незначимы</p></div>
+    <div class="card"><div class="eyebrow">Корреляции компонентов</div><b class="num" style="font-family:var(--display);font-size:1.3rem">0,287 · 0,412 · 0,173</b><p class="small muted">ранговая корреляция Спирмена: МЦ–КП; КП–ОД; МЦ–ОД (n = 110)</p></div>
+    <div class="card"><div class="eyebrow">Темп выхода на оптимум</div><b class="num" style="font-family:var(--display);font-size:1.3rem">в 2–3 раза</b><p class="small muted">экспериментальная группа достигает оптимального уровня быстрее контрольной</p></div>
+    <div class="card"><div class="eyebrow">Интегральный показатель</div><b class="num" style="font-family:var(--display);font-size:1.3rem">54,5 %</b><p class="small muted">доля ЭГ на оптимальном уровне после ОЭР против 20,0 % в КГ</p></div>
+  </section>
+  <section class="card stack">
+    <div><div class="eyebrow">Доля преподавателей на оптимальном уровне после опытно-экспериментальной работы, %</div><h3>Контрольная и экспериментальная группы</h3></div>
+    <div class="legend"><span><i style="background:var(--muted)"></i>КГ, n = 55</span><span><i style="background:var(--accent)"></i>ЭГ, n = 55</span></div>
+    <div class="bars">${RESULTS.map(r=>`<div class="bar-row"><div class="lab">${r.name}<small>${r.k}</small></div><div class="track"><div class="bar kg"><i style="width:${r.kg}%"></i><b class="num">${r.kg.toFixed(1).replace('.',',')}</b></div><div class="bar eg"><i style="width:${r.eg}%"></i><b class="num">${r.eg.toFixed(1).replace('.',',')}</b></div></div></div>`).join('')}</div>
+    <p class="small muted">Шкала 0–100 %. Источник: итоговая таблица диагностики уровня сформированности форсайт-компетенции (диссертация, глава 3).</p>
+  </section>
+  <section class="grid g2">
+    <div class="card stack"><h4>Почему операционально-деятельностный компонент растёт и в контрольной группе</h4><p class="small">Инструменты осваиваются сами по себе: контрольная группа проходила курс цифровой дидактики. Но только в экспериментальной группе они осваивались как средства форсайт-деятельности — отсюда рост мотивационно-ценностного и когнитивно-прогностического компонентов.</p></div>
+    <div class="card stack"><h4>Что измерялось</h4><p class="small">Анкеты с полустандартизированными шкалами и рефлексивные карты (мотивационно-ценностный компонент); экспертная оценка сценарных моделей и дорожных карт в цифровых конструкторах (когнитивно-прогностический); экспертные карты анализа проектных продуктов (операционально-деятельностный). Сквозное рефлексивное основание встроено в каждый компонент.</p></div>
+  </section>`;
+}
+
+function vOrg(){
+  return `
+  <div class="view-head"><div class="eyebrow">Система обеспечения</div><h1>Как развернуть технологию в своём вузе</h1>
+  <p class="lead">Три блока: педагогические условия, цифровая инфраструктура, четыре модуля сопровождения. Программа повышения квалификации — запуск цикла, а не технология целиком: цикл продолжается в неформальных форматах и в повседневной практике.</p></div>
+  <section class="stack"><div class="eyebrow">Форматы реализации</div>
+    <div class="grid g4">${[['Программа повышения квалификации','72–108 академических часов, смешанное обучение'],['Модуль переподготовки','форсайт-модуль в составе программы профессиональной переподготовки'],['Корпоративный форсайт-проект','в рамках стратегического развития университета'],['Наставничество и обмен опытом','участник прошлого потока — эксперт для нового']].map(([t,d])=>`<div class="card stack"><h4>${t}</h4><p class="small muted">${d}</p></div>`).join('')}</div>
+  </section>
+  <section class="stack"><div class="eyebrow">Четыре модуля педагогического сопровождения</div>
+    <div class="grid g2">${MODULES.map(([t,d])=>`<div class="card stack"><h3>${t}</h3><p class="small">${d}</p></div>`).join('')}</div>
+  </section>
+  <section class="stack"><div class="eyebrow">Педагогические условия</div>
+    ${CONDITIONS.map(c=>`<details><summary><span>${c.g}</span><span class="small muted">${c.basis}</span></summary><div class="body"><div class="tbl-wrap"><table><thead><tr><th>Условие</th><th>Механизм реализации</th></tr></thead><tbody>${c.items.map(([a,b])=>`<tr><td><b>${a}</b></td><td>${b}</td></tr>`).join('')}</tbody></table></div></div></details>`).join('')}
+  </section>
+  <section class="grid g2">
+    <div class="card stack"><div class="eyebrow">Группа</div><h4>12–20 человек, междисциплинарный состав</h4><p class="small">Открытый характер ситуаций и ритуализация ключевых моментов: стартовая проблематизация, защита дорожных карт, итоговая рефлексия. Рефлексивные паузы — на каждом этапе.</p></div>
+    <div class="card stack"><div class="eyebrow">После программы</div><h4>Три слоя непрерывности</h4><p class="small">Форсайт-мастерская кафедры раз в семестр — пересмотр карт друг друга (V этап вне программы). Сообщество выпускников в общем цифровом пространстве, куда добавляются новые сигналы. Дорожная карта как носитель непрерывности: создана в программе, пересматривается на мастерской, реализуется и корректируется в повседневной практике.</p></div>
+  </section>
+  <section class="card stack"><div class="eyebrow">Комплект методических материалов этапов</div>
+    <ul class="small"><li>Сценарные карты: матрица факторов, шкала вероятности и желательности, поле нарративного описания</li><li>Шаблоны дорожных карт с временной линией, ключевыми точками, ресурсами и условиями перехода</li><li>Протоколы Дельфи-опросов с правилами агрегирования и визуализации</li><li>Руководства по горизонтальному сканированию с использованием цифровых аналитических платформ</li><li>Рефлексивные протоколы трёх типов</li></ul>
+    <div class="row"><a class="btn" href="#templates">Шаблоны в приложении</a><a class="btn" href="#resources">Цифровые ресурсы</a></div>
+  </section>
+  <section class="footer-note">Автор технологии — Соколова Алина Сергеевна, Самарский национальный исследовательский университет имени академика С.П. Королёва. Научный руководитель — доктор педагогических наук, профессор Левченко Виктория Вячеславовна. Диссертация по специальности 5.8.7 «Методология и технология профессионального образования» (педагогические науки).</section>`;
+}
+
+route();
+</script>
