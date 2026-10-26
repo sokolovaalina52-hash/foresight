@@ -27,7 +27,7 @@ npm run extract-content  # заново перенести контент из s
 npm run deploy
 ```
 
-Команда прогоняет тесты, собирает сайт, проверяет запрещённые формулировки и публикует `dist/` в ветку `gh-pages`. GitHub Pages показывает сайт из этой ветки: https://sokolovaalina52-hash.github.io/foresight/
+Команда прогоняет тесты, собирает сайт, проверяет запрещённые формулировки и публикует `dist/` в ветку `gh-pages`. GitHub Pages показывает сайт из этой ветки: https://foresight-sokolova.ru (домен привязан файлом `public/CNAME`, DNS — в REG.RU)
 
 **Автодеплой через GitHub Actions (по желанию).** Готовый workflow лежит в `ci/github-actions-deploy.yml`: на каждый push в `main` он делает те же проверки и публикует сайт. Чтобы включить его:
 
