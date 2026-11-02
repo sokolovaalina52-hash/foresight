@@ -225,10 +225,15 @@ svg.sp{width:100%;height:auto;display:block}
 svg.sp .node{cursor:pointer}
 svg.sp .node:focus-visible circle.main{stroke:var(--accent);stroke-width:4}
 svg.sp text{font-family:var(--body)}
-svg.sp .lbl{font-size:12px;font-weight:600;fill:var(--fg)}
-svg.sp .pos{font-size:10.5px;fill:var(--muted)}
-svg.sp .center-t{font-family:var(--display);font-size:11px;fill:var(--fg);font-weight:500}
+svg.sp .lbl{font-size:14px;font-weight:600;fill:var(--fg)}
+svg.sp .pos{font-size:12px;fill:var(--muted)}
+svg.sp .center-t{font-family:var(--display);font-size:10px;fill:var(--fg);font-weight:500}
 svg.sp .center-s{font-size:9.5px;fill:var(--muted)}
+.sp-wrap{display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.sp-legend{list-style:none;margin:0;padding:0;display:grid;gap:.25rem}
+.sp-legend button{display:flex;gap:.6rem;align-items:center;width:100%;padding:.35rem .25rem;background:none;border:0;border-radius:8px;color:inherit;font:inherit;font-size:.92rem;text-align:left;cursor:pointer}
+.sp-legend button:hover{background:var(--surface-2)}
+.sp-legend .pill{min-width:2.6rem;justify-content:center;flex:none}
 
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);padding:0;width:min(46rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem)}
 dialog::backdrop{background:rgba(10,15,22,.5)}

@@ -91,7 +91,7 @@ export function About() {
         <div className="view-head"><div className="eyebrow">Модель</div><h2 id="h-model">Спиральная ситуационно-позиционная модель</h2>
           <p className="small muted">Нажмите на узел, чтобы перейти к этапу.</p></div>
         <div className="grid g2" style={{ alignItems: 'center' }}>
-          <div style={{ maxWidth: '32rem' }}><Spiral size={520} /></div>
+          <div style={{ maxWidth: '32rem' }}><Spiral size={520} legend={false} /></div>
           <div className="stack">
             {STAGES.map(s => <Link key={s.n} to={`/stage/${s.n}`} className="row" style={{ textDecoration: 'none', color: 'inherit' }}><span className={`pill ${s.zone}`}>{s.roman}</span><span><b>{s.name}</b> <span className="muted">— {s.position.toLowerCase()}</span></span></Link>)}
           </div>
