@@ -10,7 +10,7 @@
     "test": "vitest run",
     "check:terms": "node scripts/check-terms.mjs",
     "extract-content": "node scripts/extract-content.mjs",
-    "deploy": "npm test && npm run build && npm run check:terms && gh-pages -d dist --dotfiles --nojekyll -m \"Деплой сайта\""
+    "deploy": "npm test && npm run build && npm run check:terms && gh-pages -d dist --nojekyll --remove \"{**,.claude/**,.gitignore}\" -m \"Деплой сайта\""
   },
   "dependencies": {
     "react": "^18.3.1",
